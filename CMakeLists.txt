@@ -37,5 +37,12 @@ target_include_directories(Google::Flatbuffers
 target_link_libraries(Google::Flatbuffers
     INTERFACE ${GOOGLE_FLATBUFFERS_ROOT}/lib/libflatbuffers.a)
 
-add_executable(blazingdb-orchestator src/blazingdb-orchestator.cc)
-target_link_libraries(blazingdb-orchestator BlazingDB::Protocol Google::Flatbuffers)
+add_executable(calcite_client src/blazingdb/protocol/calcite-client.cc)
+target_link_libraries(calcite_client BlazingDB::Protocol Google::Flatbuffers)
+
+add_executable(interpreter_client src/blazingdb/protocol/interpreter-client.cc)
+target_link_libraries(interpreter_client BlazingDB::Protocol Google::Flatbuffers)
+
+
+add_executable(interpreter_server src/blazingdb/protocol/interpreter-server.cc)
+target_link_libraries(interpreter_server BlazingDB::Protocol Google::Flatbuffers)
