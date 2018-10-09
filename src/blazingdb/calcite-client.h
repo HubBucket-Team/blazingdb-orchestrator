@@ -50,17 +50,23 @@ public:
     return response.getStatus();
   }
 
-  // Status createTable(Buffer& buffer) {
+  Status dropTable(orchestrator::DDLDropTableRequestMessage& payload){
+    int64_t sessionToken = 0;
+    auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_DROP_TABLE,
+                                    0,
+                                    sessionToken,
+                                    payload);
 
-  //   Buffer responseBuffer = client.send(buffer);
-  //   ResponseMessage response{responseBuffer.data()};
-  //   if (response.getStatus() == Status_Error) {
-  //     ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-  //     throw std::runtime_error(errorMessage.getMessage());
-  //   }
-  //   return response.getStatus();
-  // }
-  //todo: reducir codigo usando MakeRequest & MakeResponse
+    Buffer responseBuffer = client.send(bufferedData);
+    ResponseMessage response{responseBuffer.data()};
+    if (response.getStatus() == Status_Error) {
+      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
+      throw std::runtime_error(errorMessage.getMessage());
+    }
+    return response.getStatus();
+  }
+
+
   Status updateSchema(std::string query)    {
 
     int64_t sessionToken = 0;

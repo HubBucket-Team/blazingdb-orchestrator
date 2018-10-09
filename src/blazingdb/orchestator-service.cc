@@ -93,7 +93,20 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
 
 
 static result_pair ddlDropTableService(uint64_t accessToken, Buffer&& buffer)  {
-  
+  std::cout << "DDL Drop Table: " << std::endl;
+  try {
+    blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
+    calcite::CalciteClient calcite_client{calcite_client_connection};
+
+    orchestrator::DDLDropTableRequestMessage payload(buffer.data());
+    auto status = calcite_client.dropTable(  payload );
+    std::cout << "status:" << status << std::endl;
+  } catch (std::runtime_error &error) {
+    // error with ddl query
+    std::cout << error.what() << std::endl;
+    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 };
