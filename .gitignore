@@ -9,3 +9,8 @@ compile_commands.json
 CTestTestfile.cmake
 
 build/
+
+/\.idea/
+/\.vscode/
+
+cmake-build-debug
