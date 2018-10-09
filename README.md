@@ -19,8 +19,7 @@ make -j8 install
 ```
 
 ## Build and Run
-
-### To run you must initialize RAl and Calcite service, see blazingdb-protocol/integration
+To run you must initialize RAl and Calcite service, see blazingdb-protocol/integration.
 To use this service you could use examples from blazingdb-protocol/python/examples (develop branch)
 ```
 cd cpp
@@ -30,7 +29,8 @@ make -j8
 ./blazingdb_orchestator_service
 ```
 
-## Clean (Remember to clean build each time cpp library blazingdb-protocol/develop is updated)
+## Clean 
+Remember to clean build each time cpp library blazingdb-protocol/develop is updated)
 
 ```
 rm -rf build/
