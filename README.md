@@ -9,24 +9,44 @@ Here are the steps to do so, including the necessary dependencies, just be sure 
 
 ### Install dependencies
 
-Install Flatbuffers
+Install blazingdb-protocol 
 
-```
-git clone https://github.com/google/flatbuffers.git
-cd flatbuffers && mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j8 install
-```
+https://github.com/BlazingDB/blazingdb-protocol/tree/develop
+
+- cpp-library
+- java-library
+- python-library
 
 ## Build and Run
-To run you must initialize RAl and Calcite service, see blazingdb-protocol/integration.
-To use this service you could use examples from blazingdb-protocol/python/examples (develop branch)
+To run orchestrator-service you must initialize RAl and Calcite service, see blazingdb-protocol/integration.
+```
+cd blazingdb-protocol/integration
+bash build.sh
+
+echo "run calcite service"
+cd blazingdb-protocol/integration/services/services/calcite-service
+java -jar target/calcite-service-1.0-SNAPSHOT.jar 
+
+echo "running ral service"
+cd blazingdb-protocol/integration/services/cpp/build/ 
+./blazingdb_ral_service 
+```
+
+Build and run orchestrator-service
 ```
 cd cpp
 mkdir build && cd build
 cmake ..
 make -j8 
+echo "running orchestrator service"
 ./blazingdb_orchestator_service
+```
+
+To use this service you could use examples from blazingdb-protocol/python/examples (develop branch)
+```
+cd blazingdb-protocol/integration/clients/python-connector
+python3 py-connector.py
+python3 dml_create_table.py
 ```
 
 ## Clean 
