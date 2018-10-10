@@ -34,7 +34,7 @@ cd blazingdb-protocol/integration/services/cpp/build/
 
 Build and run orchestrator-service
 ```
-cd cpp
+cd blazingdb-orchestrator
 mkdir build && cd build
 cmake ..
 make -j8 
