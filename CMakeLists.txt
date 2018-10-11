@@ -9,7 +9,7 @@ ExternalProject_Add(blazingdb-protocol_ep
 		-DCMAKE_BUILD_TYPE=RELEASE
 		-DCMAKE_INSTALL_PREFIX=blazingdb-protocol_prefix
 	GIT_REPOSITORY git@github.com:BlazingDB/blazingdb-protocol.git
-    GIT_TAG develop
+    GIT_TAG master
     SOURCE_SUBDIR cpp
 	UPDATE_COMMAND "")
 ExternalProject_Get_property(blazingdb-protocol_ep BINARY_DIR)

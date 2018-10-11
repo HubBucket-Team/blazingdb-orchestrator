@@ -21,11 +21,10 @@ public:
   InterpreterClient(blazingdb::protocol::Connection & connection) : client {connection}
   {}
 
-  uint64_t executePlan(std::string logicalPlan, int64_t access_token)  {
+  uint64_t executePlan(std::string logicalPlan, const ::blazingdb::protocol::TableGroupDTO &tableGroup, int64_t access_token)  {
     auto bufferedData = MakeRequest(interpreter::MessageType_ExecutePlan,
-                                     logicalPlan.length(),
                                      access_token,
-                                     DMLRequestMessage{logicalPlan});
+                                     ExecutePlanRequestMessage{logicalPlan, tableGroup});
 
     Buffer responseBuffer = client.send(bufferedData);
     ResponseMessage response{responseBuffer.data()};
@@ -34,13 +33,12 @@ public:
       ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
       throw std::runtime_error(errorMessage.getMessage());
     }
-    DMLResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload.getToken();
+    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
+    return responsePayload.getResultToken();
   }
 
   Status closeConnection (int64_t access_token) {
     auto bufferedData = MakeRequest(interpreter::MessageType_CloseConnection,
-                                    0,
                                     access_token,
                                     ZeroMessage{});
     Buffer responseBuffer = client.send(bufferedData);

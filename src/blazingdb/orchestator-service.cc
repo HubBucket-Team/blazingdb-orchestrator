@@ -3,11 +3,8 @@
 #include <tuple>
 #include <blazingdb/protocol/api.h>
 
-#include "calcite-client.h"
 #include "ral-client.h"
-
-#include "orchestrator-server.h"
-
+#include "calcite-client.h"
 #include <blazingdb/protocol/orchestrator/messages.h>
 
 
@@ -53,7 +50,7 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
     try {
       blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
       interpreter::InterpreterClient ral_client{ral_client_connection};
-      resultToken = ral_client.executePlan(logicalPlan, accessToken);
+      resultToken = ral_client.executePlan(logicalPlan, requestPayload.getTableGroup(), accessToken);
       std::cout << "resultToken:" << resultToken << std::endl;
     } catch (std::runtime_error &error) {
       // error with query plan: not resultToken

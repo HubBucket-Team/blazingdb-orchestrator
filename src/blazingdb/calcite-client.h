@@ -24,7 +24,6 @@ public:
 
     int64_t sessionToken = 0;
     auto bufferedData = MakeRequest(calcite::MessageType_DML,
-                                     query.length(),
                                      sessionToken,
                                      DMLRequestMessage{query});
     Buffer responseBuffer = client.send(bufferedData);
@@ -37,7 +36,6 @@ public:
 
     int64_t sessionToken = 0;
     auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_CREATE_TABLE,
-                                     0,
                                      sessionToken,
                                      payload);
 
@@ -53,7 +51,6 @@ public:
   Status dropTable(orchestrator::DDLDropTableRequestMessage& payload){
     int64_t sessionToken = 0;
     auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_DROP_TABLE,
-                                    0,
                                     sessionToken,
                                     payload);
 
@@ -71,7 +68,6 @@ public:
 
     int64_t sessionToken = 0;
     auto bufferedData = MakeRequest(calcite::MessageType_DDL,
-                                     query.length(),
                                      sessionToken,
                                      DDLRequestMessage{query});
 
