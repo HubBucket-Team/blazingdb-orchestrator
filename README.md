@@ -24,7 +24,7 @@ cd blazingdb-protocol/integration
 bash build.sh
 
 echo "run calcite service"
-cd blazingdb-protocol/integration/services/services/calcite-service
+cd blazingdb-protocol/integration/services/calcite-service
 java -jar target/calcite-service-1.0-SNAPSHOT.jar 
 
 echo "running ral service"
