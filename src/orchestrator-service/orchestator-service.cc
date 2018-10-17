@@ -5,7 +5,7 @@
 
 #include "ral-client.h"
 #include "calcite-client.h"
-#include <blazingdb/protocol/orchestrator/messages.h>
+#include <blazingdb/protocol/message/orchestrator/messages.h>
 
 
 using namespace blazingdb::protocol;
@@ -31,11 +31,7 @@ static result_pair  closeConnectionService(uint64_t accessToken, Buffer&& buffer
   }
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
-};
-
-
-
-
+}; 
 static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
   orchestrator::DMLRequestMessage requestPayload(buffer.data());
   auto query = requestPayload.getQuery();
@@ -50,7 +46,7 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
     try {
       blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
       interpreter::InterpreterClient ral_client{ral_client_connection};
-      resultToken = ral_client.executePlan(logicalPlan, requestPayload.getTableGroup(), accessToken);
+      resultToken = ral_client.executeDirectPlan(logicalPlan, requestPayload.getTableGroup(), accessToken);
       std::cout << "resultToken:" << resultToken << std::endl;
     } catch (std::runtime_error &error) {
       // error with query plan: not resultToken
@@ -115,7 +111,6 @@ int main() {
   blazingdb::protocol::UnixSocketConnection server_connection({"/tmp/orchestrator.socket", std::allocator<char>()});
   blazingdb::protocol::Server server(server_connection);
 
-
   std::map<int8_t, FunctionType> services;
   services.insert(std::make_pair(orchestrator::MessageType_DML, &dmlService));
 
@@ -131,10 +126,7 @@ int main() {
 
     auto result = services[request.messageType()] ( request.accessToken(),  request.getPayloadBuffer() );
     ResponseMessage responseObject{result.first, result.second};
-    auto bufferedData = responseObject.getBufferData();
-    Buffer buffer{bufferedData->data(),
-                  bufferedData->size()};
-    return buffer;
+    return Buffer{responseObject.getBufferData()}; 
   };
   server.handle(orchestratorService);
   return 0;

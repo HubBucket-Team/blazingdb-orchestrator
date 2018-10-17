@@ -2,7 +2,13 @@ cmake_minimum_required(VERSION 3.3)
 
 set(CMAKE_CXX_STANDARD 11)
 
+# Include CMake modules
+include(FeatureSummary)
+include(CheckIncludeFiles)
+include(CheckLibraryExists)
+include(CTest)
 include(ExternalProject)
+find_package(Threads)
 
 ExternalProject_Add(blazingdb-protocol_ep
 	CMAKE_ARGS
@@ -17,6 +23,8 @@ set(BLAZINGDB_PROTOCOL_ROOT ${BINARY_DIR}/blazingdb-protocol_prefix)
 
 file(MAKE_DIRECTORY ${BLAZINGDB_PROTOCOL_ROOT}/include)
 file(MAKE_DIRECTORY ${BLAZINGDB_PROTOCOL_ROOT}/lib)
+
+set(CMAKE_CXX_FLAGS "-pthread")
 
 add_library(BlazingDB::Protocol INTERFACE IMPORTED)
 add_dependencies(BlazingDB::Protocol blazingdb-protocol_ep)
@@ -37,5 +45,5 @@ target_include_directories(Google::Flatbuffers
 target_link_libraries(Google::Flatbuffers
     INTERFACE ${GOOGLE_FLATBUFFERS_ROOT}/lib/libflatbuffers.a)
 
-add_executable(blazingdb_orchestator_service src/blazingdb/orchestator-service.cc)
-target_link_libraries(blazingdb_orchestator_service BlazingDB::Protocol Google::Flatbuffers)
+add_executable(blazingdb_orchestator_service src/orchestrator-service/orchestator-service.cc)
+target_link_libraries(blazingdb_orchestator_service pthread BlazingDB::Protocol Google::Flatbuffers)
