@@ -12,7 +12,7 @@ find_package(Threads)
 
 ExternalProject_Add(blazingdb-protocol_ep
 	CMAKE_ARGS
-		-DCMAKE_BUILD_TYPE=RELEASE
+		-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
 		-DCMAKE_INSTALL_PREFIX=blazingdb-protocol_prefix
 	GIT_REPOSITORY git@github.com:BlazingDB/blazingdb-protocol.git
     GIT_TAG develop
