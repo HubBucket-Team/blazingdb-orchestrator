@@ -31,12 +31,12 @@ static result_pair  closeConnectionService(uint64_t accessToken, Buffer&& buffer
   }
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
-}; 
+};
 static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
   orchestrator::DMLRequestMessage requestPayload(buffer.data());
   auto query = requestPayload.getQuery();
   std::cout << "DML: " << query << std::endl;
-  uint64_t resultToken = 0L;
+  std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
 
   try {
     blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
@@ -46,8 +46,7 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
     try {
       blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
       interpreter::InterpreterClient ral_client{ral_client_connection};
-      resultToken = ral_client.executeDirectPlan(logicalPlan, requestPayload.getTableGroup(), accessToken);
-      std::cout << "resultToken:" << resultToken << std::endl;
+      resultBuffer = ral_client.executeDirectPlan(logicalPlan, requestPayload.getTableGroup(), accessToken);
     } catch (std::runtime_error &error) {
       // error with query plan: not resultToken
       std::cout << error.what() << std::endl;
@@ -60,18 +59,17 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
     ResponseErrorMessage errorMessage{ std::string{error.what()} };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
-  orchestrator::DMLResponseMessage response{resultToken};
-  return std::make_pair(Status_Success, response.getBufferData());
+  return std::make_pair(Status_Success, resultBuffer);
 };
- 
- 
+
+
 static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer)  {
   std::cout << "DDL Create Table: " << std::endl;
    try {
     blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
     calcite::CalciteClient calcite_client{calcite_client_connection};
 
-    orchestrator::DDLCreateTableRequestMessage payload(buffer.data()); 
+    orchestrator::DDLCreateTableRequestMessage payload(buffer.data());
     auto status = calcite_client.createTable(  payload );
     std::cout << "status:" << status << std::endl;
   } catch (std::runtime_error &error) {
@@ -126,7 +124,7 @@ int main() {
 
     auto result = services[request.messageType()] ( request.accessToken(),  request.getPayloadBuffer() );
     ResponseMessage responseObject{result.first, result.second};
-    return Buffer{responseObject.getBufferData()}; 
+    return Buffer{responseObject.getBufferData()};
   };
   server.handle(orchestratorService);
   return 0;

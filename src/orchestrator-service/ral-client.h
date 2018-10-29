@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -10,45 +10,45 @@
 #include <blazingdb/protocol/message/interpreter/messages.h>
 
 namespace blazingdb {
-namespace protocol { 
+namespace protocol {
 namespace interpreter {
- 
+
 class InterpreterClient {
 public:
   InterpreterClient(blazingdb::protocol::Connection & connection) : client {connection}
   {}
-  
-  uint64_t executeDirectPlan(std::string logicalPlan, const blazingdb::protocol::TableGroup *tableGroup, int64_t access_token)  {
-    
+
+  std::shared_ptr<flatbuffers::DetachedBuffer> executeDirectPlan(std::string logicalPlan, const blazingdb::protocol::TableGroup *tableGroup, int64_t access_token)  {
+
     auto bufferedData = MakeRequest(interpreter::MessageType_ExecutePlan,
                                      access_token,
                                      ExecutePlanDirectRequestMessage{logicalPlan, tableGroup});
 
     Buffer responseBuffer = client.send(bufferedData);
     ResponseMessage response{responseBuffer.data()};
-    
+
     if (response.getStatus() == Status_Error) {
       ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
       throw std::runtime_error(errorMessage.getMessage());
     }
     ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload.getResultToken();
+    return responsePayload.getBufferData();
   }
 
-  uint64_t executePlan(std::string logicalPlan, const ::blazingdb::protocol::TableGroupDTO &tableGroup, int64_t access_token)  {
+  std::shared_ptr<flatbuffers::DetachedBuffer> executePlan(std::string logicalPlan, const ::blazingdb::protocol::TableGroupDTO &tableGroup, int64_t access_token)  {
     auto bufferedData = MakeRequest(interpreter::MessageType_ExecutePlan,
                                      access_token,
                                      ExecutePlanRequestMessage{logicalPlan, tableGroup});
 
     Buffer responseBuffer = client.send(bufferedData);
     ResponseMessage response{responseBuffer.data()};
-    
+
     if (response.getStatus() == Status_Error) {
       ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
       throw std::runtime_error(errorMessage.getMessage());
     }
     ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload.getResultToken();
+    return responsePayload.getBufferData();
   }
 
   std::vector<::gdf_dto::gdf_column> getResult(uint64_t resultToken, int64_t access_token){
@@ -58,7 +58,7 @@ public:
 
     Buffer responseBuffer = client.send(bufferedData);
     ResponseMessage response{responseBuffer.data()};
-    
+
     if (response.getStatus() == Status_Error) {
       ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
       throw std::runtime_error(errorMessage.getMessage());
