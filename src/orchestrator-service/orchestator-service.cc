@@ -7,12 +7,15 @@
 #include "calcite-client.h"
 #include <blazingdb/protocol/message/orchestrator/messages.h>
 
+#include <cstdlib>     /* srand, rand */
+#include <ctime>       /* time */
 
 using namespace blazingdb::protocol;
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 
 static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buffer)  {
-  int64_t token = 123456789L; // get_uuid()
+  srand(time(0));
+  int64_t token = rand();
   orchestrator::AuthResponseMessage response{token};
   std::cout << "authorizationService: " << token << std::endl;
   return std::make_pair(Status_Success, response.getBufferData());
@@ -129,4 +132,3 @@ int main() {
   server.handle(orchestratorService);
   return 0;
 }
-
