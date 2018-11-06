@@ -75,6 +75,7 @@ cmake_install.cmake
 
 #generated folders (in source)
 blazingdb-protocol_ep-prefix
+google-flatbuffers_ep-prefix
 
 #generated binaries (in source)
 blazingdb_orchestator_service
