@@ -8,7 +8,7 @@ include(ExternalProject)
 
 ExternalProject_Add(google-flatbuffers_ep
   CMAKE_ARGS
-    -DCMAKE_BUILD_TYPE=RELEASE
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_INSTALL_PREFIX=google-flatbuffers_prefix
   GIT_REPOSITORY https://github.com/google/flatbuffers.git
   GIT_TAG v1.9.0
