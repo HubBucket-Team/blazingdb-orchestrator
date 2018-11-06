@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <iostream>
 #include <exception>
@@ -10,29 +10,25 @@
 #include <blazingdb/protocol/message/orchestrator/messages.h>
 
 namespace blazingdb {
-namespace protocol { 
+namespace protocol {
 
-namespace calcite { 
+namespace calcite {
 
 class CalciteClient {
 public:
   CalciteClient(blazingdb::protocol::Connection& con) : client { con }
   {}
 
-  std::string getLogicalPlan(std::string query)  {
-
+  DMLResponseMessage runQuery(std::string query) {
     int64_t sessionToken = 0;
-    auto bufferedData = MakeRequest(calcite::MessageType_DML,
-                                     sessionToken,
-                                     DMLRequestMessage{query});
+    auto    bufferedData = MakeRequest(
+        calcite::MessageType_DML, sessionToken, DMLRequestMessage{query});
     Buffer responseBuffer = client.send(bufferedData);
-    auto response = MakeResponse<DMLResponseMessage>(responseBuffer);
-    return response.getLogicalPlan();
+    auto   response       = MakeResponse<DMLResponseMessage>(responseBuffer);
+    return response;
   }
 
   Status createTable(orchestrator::DDLCreateTableRequestMessage& payload){
-
-
     int64_t sessionToken = 0;
     auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_CREATE_TABLE,
                                      sessionToken,

@@ -44,8 +44,11 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
   try {
     blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
     calcite::CalciteClient calcite_client{calcite_client_connection};
-    auto logicalPlan = calcite_client.getLogicalPlan(query);
+    auto response = calcite_client.runQuery(query);
+    auto logicalPlan = response.getLogicalPlan();
+    auto time = response.getTime();
     std::cout << "plan:" << logicalPlan << std::endl;
+    std::cout << "time:" << time << std::endl;
     try {
       blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
       interpreter::InterpreterClient ral_client{ral_client_connection};
