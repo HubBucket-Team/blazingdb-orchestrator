@@ -18,13 +18,16 @@ public:
   InterpreterClient(blazingdb::protocol::Connection & connection) : client {connection}
   {}
 
-  std::shared_ptr<flatbuffers::DetachedBuffer> executeDirectPlan(std::string logicalPlan, const blazingdb::protocol::TableGroup *tableGroup, int64_t access_token)  {
+  ExecutePlanResponseMessage
+  executeDirectPlan(std::string                            logicalPlan,
+                    const blazingdb::protocol::TableGroup *tableGroup,
+                    int64_t                                access_token) {
+    auto bufferedData =
+        MakeRequest(interpreter::MessageType_ExecutePlan,
+                    access_token,
+                    ExecutePlanDirectRequestMessage{logicalPlan, tableGroup});
 
-    auto bufferedData = MakeRequest(interpreter::MessageType_ExecutePlan,
-                                     access_token,
-                                     ExecutePlanDirectRequestMessage{logicalPlan, tableGroup});
-
-    Buffer responseBuffer = client.send(bufferedData);
+    Buffer          responseBuffer = client.send(bufferedData);
     ResponseMessage response{responseBuffer.data()};
 
     if (response.getStatus() == Status_Error) {
@@ -32,7 +35,7 @@ public:
       throw std::runtime_error(errorMessage.getMessage());
     }
     ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload.getBufferData();
+    return responsePayload;
   }
 
   std::shared_ptr<flatbuffers::DetachedBuffer> executePlan(std::string logicalPlan, const ::blazingdb::protocol::TableGroupDTO &tableGroup, int64_t access_token)  {

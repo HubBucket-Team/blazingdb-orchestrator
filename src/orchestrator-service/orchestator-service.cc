@@ -5,6 +5,9 @@
 
 #include "ral-client.h"
 #include "calcite-client.h"
+
+#include <blazingdb/protocol/message/interpreter/messages.h>
+#include <blazingdb/protocol/message/messages.h>
 #include <blazingdb/protocol/message/orchestrator/messages.h>
 
 #include <cstdlib>     /* srand, rand */
@@ -52,7 +55,14 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
     try {
       blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
       interpreter::InterpreterClient ral_client{ral_client_connection};
-      resultBuffer = ral_client.executeDirectPlan(logicalPlan, requestPayload.getTableGroup(), accessToken);
+
+      auto executePlanResponseMessage = ral_client.executeDirectPlan(
+          logicalPlan, requestPayload.getTableGroup(), accessToken);
+      auto nodeInfo = executePlanResponseMessage.getNodeInfo();
+      auto dmlResponseMessage = orchestrator::DMLResponseMessage(
+          executePlanResponseMessage.getResultToken(),
+          nodeInfo, time);
+      resultBuffer = dmlResponseMessage.getBufferData();
     } catch (std::runtime_error &error) {
       // error with query plan: not resultToken
       std::cout << error.what() << std::endl;
