@@ -38,4 +38,4 @@ find_package(Threads)
 set(CMAKE_CXX_FLAGS "-pthread")
 
 add_executable(blazingdb_orchestator_service src/orchestrator-service/orchestator-service.cc)
-target_link_libraries(blazingdb_orchestator_service pthread Google::Flatbuffers ${BLAZINGDB_PROTOCOL_STATIC_LIB})
+target_link_libraries(blazingdb_orchestator_service pthread ${FLATBUFFERS_STATIC_LIB} ${BLAZINGDB_PROTOCOL_STATIC_LIB})
