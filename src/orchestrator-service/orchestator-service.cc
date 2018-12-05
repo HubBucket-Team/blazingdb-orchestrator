@@ -9,12 +9,50 @@
 #include <blazingdb/protocol/message/interpreter/messages.h>
 #include <blazingdb/protocol/message/messages.h>
 #include <blazingdb/protocol/message/orchestrator/messages.h>
+#include <blazingdb/protocol/message/io/file_system.h>
 
 #include <cstdlib>     /* srand, rand */
 #include <ctime>       /* time */
 
 using namespace blazingdb::protocol;
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
+
+static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
+  try {
+    blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
+    interpreter::InterpreterClient ral_client{ral_client_connection};
+    auto response = ral_client.registerFileSystem(accessToken, buffer);
+
+  } catch (std::runtime_error &error) {
+    // error with query plan: not resultToken
+    std::cout << error.what() << std::endl;
+    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
+  int64_t token = rand();
+  orchestrator::AuthResponseMessage response{token};
+  std::cout << "registerFileSystem: " << accessToken << std::endl;
+  return std::make_pair(Status_Success, response.getBufferData());
+}
+
+static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  {
+  try {
+    blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
+    interpreter::InterpreterClient ral_client{ral_client_connection};
+    blazingdb::message::io::FileSystemDeregisterRequestMessage message(buffer.data());
+    auto response = ral_client.deregisterFileSystem(accessToken, message.getAuthority());
+
+  } catch (std::runtime_error &error) {
+    // error with query plan: not resultToken
+    std::cout << error.what() << std::endl;
+    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
+  int64_t token = rand();
+  orchestrator::AuthResponseMessage response{token};
+  std::cout << "deregisterFileSystem: " << accessToken << std::endl;
+  return std::make_pair(Status_Success, response.getBufferData());
+}
 
 static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buffer)  {
   srand(time(0));
@@ -133,6 +171,9 @@ int main() {
 
   services.insert(std::make_pair(orchestrator::MessageType_AuthOpen, &openConnectionService));
   services.insert(std::make_pair(orchestrator::MessageType_AuthClose, &closeConnectionService));
+
+  services.insert(std::make_pair(orchestrator::MessageType_RegisterFileSystem, &registerFileSystem));
+  services.insert(std::make_pair(orchestrator::MessageType_DeregisterFileSystem, &deregisterFileSystem));
 
   auto orchestratorService = [&services](const blazingdb::protocol::Buffer &requestBuffer) -> blazingdb::protocol::Buffer {
     RequestMessage request{requestBuffer.data()};
