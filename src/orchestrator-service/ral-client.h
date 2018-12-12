@@ -55,6 +55,23 @@ public:
     return responsePayload.getBufferData();
   }
 
+  std::shared_ptr<flatbuffers::DetachedBuffer> loadCsv( Buffer& buffer, int64_t access_token) {
+    auto bufferedData = MakeRequest(interpreter::MessageType_LoadCSV,
+                                     access_token,
+                                     buffer
+                                     );
+
+    Buffer responseBuffer = client.send(bufferedData);
+    ResponseMessage response{responseBuffer.data()};
+
+    if (response.getStatus() == Status_Error) {
+      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
+      throw std::runtime_error(errorMessage.getMessage());
+    }
+    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
+    return responsePayload.getBufferData();
+  }
+
   std::vector<::gdf_dto::gdf_column> getResult(uint64_t resultToken, int64_t access_token){
     auto bufferedData = MakeRequest(interpreter::MessageType_GetResult,
                                      access_token,

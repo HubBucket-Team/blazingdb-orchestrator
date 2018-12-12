@@ -29,9 +29,7 @@ static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
     ResponseErrorMessage errorMessage{ std::string{error.what()} };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
-  int64_t token = rand();
-  orchestrator::AuthResponseMessage response{token};
-  std::cout << "registerFileSystem: " << accessToken << std::endl;
+  ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
@@ -48,10 +46,24 @@ static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer) 
     ResponseErrorMessage errorMessage{ std::string{error.what()} };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
-  int64_t token = rand();
-  orchestrator::AuthResponseMessage response{token};
-  std::cout << "deregisterFileSystem: " << accessToken << std::endl;
+  ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
+}
+
+static result_pair loadCsv(uint64_t accessToken, Buffer&& buffer) {
+  std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
+   try {
+    blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
+    interpreter::InterpreterClient ral_client{ral_client_connection};
+    resultBuffer = ral_client.loadCsv(buffer, accessToken);
+
+  } catch (std::runtime_error &error) {
+    // error with query plan: not resultToken
+    std::cout << error.what() << std::endl;
+    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
+  return std::make_pair(Status_Success, resultBuffer);
 }
 
 static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buffer)  {
@@ -174,6 +186,8 @@ int main() {
 
   services.insert(std::make_pair(orchestrator::MessageType_RegisterFileSystem, &registerFileSystem));
   services.insert(std::make_pair(orchestrator::MessageType_DeregisterFileSystem, &deregisterFileSystem));
+
+  services.insert(std::make_pair(orchestrator::MessageType_LoadCSV, &loadCsv));
 
   auto orchestratorService = [&services](const blazingdb::protocol::Buffer &requestBuffer) -> blazingdb::protocol::Buffer {
     RequestMessage request{requestBuffer.data()};
