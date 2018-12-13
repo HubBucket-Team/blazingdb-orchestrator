@@ -24,5 +24,7 @@ ExternalProject_Add(flatbuffers
     CMAKE_ARGS
         -DCMAKE_BUILD_TYPE=Release
         -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/flatbuffers-install
+        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+        -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
     UPDATE_COMMAND ""
 )

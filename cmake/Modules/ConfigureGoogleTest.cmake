@@ -6,11 +6,6 @@
 # BEGIN macros
 
 macro(CONFIGURE_GOOGLETEST_EXTERNAL_PROJECT)
-    set(GOOGLETEST_CMAKE_ARGS
-        " -Dgtest_build_samples=ON"
-        " -DCMAKE_C_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0"      # enable old ABI for C/C++
-        " -DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0")   # enable old ABI for C/C++
-
     # Download and unpack googletest at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/GoogleTest.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/googletest-download/CMakeLists.txt)
 

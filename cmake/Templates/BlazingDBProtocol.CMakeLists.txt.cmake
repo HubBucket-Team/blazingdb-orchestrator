@@ -22,4 +22,6 @@ ExternalProject_Add(blazingdb-protocol
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DFLATBUFFERS_INSTALL_DIR=${FLATBUFFERS_INSTALL_DIR}
         -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-protocol-install
+        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+        -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
 )
