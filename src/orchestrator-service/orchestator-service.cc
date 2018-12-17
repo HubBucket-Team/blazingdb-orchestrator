@@ -66,6 +66,24 @@ static result_pair loadCsv(uint64_t accessToken, Buffer&& buffer) {
   return std::make_pair(Status_Success, resultBuffer);
 }
 
+
+static result_pair loadParquet(uint64_t accessToken, Buffer&& buffer) {
+  std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
+   try {
+    blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
+    interpreter::InterpreterClient ral_client{ral_client_connection};
+    resultBuffer = ral_client.loadParquet(buffer, accessToken);
+
+  } catch (std::runtime_error &error) {
+    // error with query plan: not resultToken
+    std::cout << error.what() << std::endl;
+    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
+  return std::make_pair(Status_Success, resultBuffer);
+}
+
+
 static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buffer)  {
   srand(time(0));
   int64_t token = rand();
@@ -88,6 +106,47 @@ static result_pair  closeConnectionService(uint64_t accessToken, Buffer&& buffer
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 };
+
+static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) {
+  blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
+  auto query = requestPayload.statement;
+  std::cout << "DML: " << query << std::endl;
+  std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
+
+  try {
+    blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
+    calcite::CalciteClient calcite_client{calcite_client_connection};
+    auto response = calcite_client.runQuery(query);
+    auto logicalPlan = response.getLogicalPlan();
+    auto time = response.getTime();
+    std::cout << "plan:" << logicalPlan << std::endl;
+    std::cout << "time:" << time << std::endl;
+    try {
+      blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
+      interpreter::InterpreterClient ral_client{ral_client_connection};
+
+      auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan, requestPayload.tableGroup, accessToken);
+      
+      auto nodeInfo = executePlanResponseMessage.getNodeInfo();
+      auto dmlResponseMessage = orchestrator::DMLResponseMessage(
+          executePlanResponseMessage.getResultToken(),
+          nodeInfo, time);
+      resultBuffer = dmlResponseMessage.getBufferData();
+    } catch (std::runtime_error &error) {
+      // error with query plan: not resultToken
+      std::cout << error.what() << std::endl;
+      ResponseErrorMessage errorMessage{ std::string{error.what()} };
+      return std::make_pair(Status_Error, errorMessage.getBufferData());
+    }
+  } catch (std::runtime_error &error) {
+    // error with query: not logical plan error
+    std::cout << error.what() << std::endl;
+    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
+  return std::make_pair(Status_Success, resultBuffer);
+}
+
 static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
   orchestrator::DMLRequestMessage requestPayload(buffer.data());
   auto query = requestPayload.getQuery();
@@ -177,6 +236,7 @@ int main() {
 
   std::map<int8_t, FunctionType> services;
   services.insert(std::make_pair(orchestrator::MessageType_DML, &dmlService));
+  services.insert(std::make_pair(orchestrator::MessageType_DML_FS, &dmlFileSystemService));
 
   services.insert(std::make_pair(orchestrator::MessageType_DDL_CREATE_TABLE, &ddlCreateTableService));
   services.insert(std::make_pair(orchestrator::MessageType_DDL_DROP_TABLE, &ddlDropTableService));
@@ -188,6 +248,7 @@ int main() {
   services.insert(std::make_pair(orchestrator::MessageType_DeregisterFileSystem, &deregisterFileSystem));
 
   services.insert(std::make_pair(orchestrator::MessageType_LoadCSV, &loadCsv));
+  services.insert(std::make_pair(orchestrator::MessageType_LoadParquet, &loadParquet));
 
   auto orchestratorService = [&services](const blazingdb::protocol::Buffer &requestBuffer) -> blazingdb::protocol::Buffer {
     RequestMessage request{requestBuffer.data()};

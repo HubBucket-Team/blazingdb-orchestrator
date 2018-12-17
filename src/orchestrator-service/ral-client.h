@@ -39,6 +39,26 @@ public:
     return responsePayload;
   }
 
+  ExecutePlanResponseMessage executeFSDirectPlan(std::string logicalPlan,
+                    blazingdb::message::io::FileSystemTableGroupSchema& tableGroup,
+                    int64_t                                access_token) {
+    auto bufferedData =
+        MakeRequest(interpreter::MessageType_ExecutePlanFileSystem,
+                    access_token,
+                    blazingdb::message::io::FileSystemDMLRequestMessage{logicalPlan, tableGroup});
+
+
+    Buffer          responseBuffer = client.send(bufferedData);
+    ResponseMessage response{responseBuffer.data()};
+
+    if (response.getStatus() == Status_Error) {
+      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
+      throw std::runtime_error(errorMessage.getMessage());
+    }
+    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
+    return responsePayload;
+  }
+
   std::shared_ptr<flatbuffers::DetachedBuffer> executePlan(std::string logicalPlan, const ::blazingdb::protocol::TableGroupDTO &tableGroup, int64_t access_token)  {
     auto bufferedData = MakeRequest(interpreter::MessageType_ExecutePlan,
                                      access_token,
@@ -57,6 +77,23 @@ public:
 
   std::shared_ptr<flatbuffers::DetachedBuffer> loadCsv( Buffer& buffer, int64_t access_token) {
     auto bufferedData = MakeRequest(interpreter::MessageType_LoadCSV,
+                                     access_token,
+                                     buffer
+                                     );
+
+    Buffer responseBuffer = client.send(bufferedData);
+    ResponseMessage response{responseBuffer.data()};
+
+    if (response.getStatus() == Status_Error) {
+      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
+      throw std::runtime_error(errorMessage.getMessage());
+    }
+    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
+    return responsePayload.getBufferData();
+  }
+
+  std::shared_ptr<flatbuffers::DetachedBuffer> loadParquet( Buffer& buffer, int64_t access_token) {
+    auto bufferedData = MakeRequest(interpreter::MessageType_LoadParquet,
                                      access_token,
                                      buffer
                                      );
@@ -117,6 +154,7 @@ public:
     }
     return response.getStatus();
   }
+  
   Status deregisterFileSystem(int64_t access_token, const std::string& authority) {
     auto bufferedData = MakeRequest(interpreter::MessageType_DeregisterFileSystem,
                                     access_token,
