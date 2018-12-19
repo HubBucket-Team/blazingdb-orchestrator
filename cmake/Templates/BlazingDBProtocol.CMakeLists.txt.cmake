@@ -13,7 +13,7 @@ include(ExternalProject)
 
 ExternalProject_Add(blazingdb-protocol
     GIT_REPOSITORY    git@github.com:BlazingDB/blazingdb-protocol.git
-    GIT_TAG           develop
+    GIT_TAG           ${BLAZINGDB_PROTOCOL_BRANCH}
     SOURCE_SUBDIR     cpp
     SOURCE_DIR        "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-protocol-src"
     BINARY_DIR        "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-protocol-build"
