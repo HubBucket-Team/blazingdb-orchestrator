@@ -50,12 +50,12 @@ static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer) 
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
-static result_pair loadCsv(uint64_t accessToken, Buffer&& buffer) {
+static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
    try {
     blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
     interpreter::InterpreterClient ral_client{ral_client_connection};
-    resultBuffer = ral_client.loadCsv(buffer, accessToken);
+    resultBuffer = ral_client.loadCsvSchema(buffer, accessToken);
 
   } catch (std::runtime_error &error) {
     // error with query plan: not resultToken
@@ -67,12 +67,12 @@ static result_pair loadCsv(uint64_t accessToken, Buffer&& buffer) {
 }
 
 
-static result_pair loadParquet(uint64_t accessToken, Buffer&& buffer) {
+static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
    try {
     blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
     interpreter::InterpreterClient ral_client{ral_client_connection};
-    resultBuffer = ral_client.loadParquet(buffer, accessToken);
+    resultBuffer = ral_client.loadParquetSchema(buffer, accessToken);
 
   } catch (std::runtime_error &error) {
     // error with query plan: not resultToken
@@ -110,7 +110,7 @@ static result_pair  closeConnectionService(uint64_t accessToken, Buffer&& buffer
 static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) {
   blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
   auto query = requestPayload.statement;
-  std::cout << "DML: " << query << std::endl;
+  std::cout << "##DML-FS: " << query << std::endl;
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
 
   try {
@@ -189,14 +189,18 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
 
 
 static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer)  {
-  std::cout << "DDL Create Table: " << std::endl;
+  std::cout << "###DDL Create Table: " << std::endl;
    try {
     blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
     calcite::CalciteClient calcite_client{calcite_client_connection};
 
     orchestrator::DDLCreateTableRequestMessage payload(buffer.data());
+    std::cout << "bdname:" << payload.dbName << std::endl;
+    std::cout << "table:" << payload.name << std::endl;
+    for (auto col : payload.columnNames)
+      std::cout << "\ntable.column:" << col << std::endl;
+    
     auto status = calcite_client.createTable(  payload );
-    std::cout << "status:" << status << std::endl;
   } catch (std::runtime_error &error) {
      // error with ddl query
      std::cout << error.what() << std::endl;
@@ -209,14 +213,17 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
 
 
 static result_pair ddlDropTableService(uint64_t accessToken, Buffer&& buffer)  {
-  std::cout << "DDL Drop Table: " << std::endl;
+  std::cout << "##DDL Drop Table: " << std::endl;
+  
   try {
     blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
     calcite::CalciteClient calcite_client{calcite_client_connection};
 
     orchestrator::DDLDropTableRequestMessage payload(buffer.data());
+    std::cout << "cbname:" << payload.dbName << std::endl;
+    std::cout << "table.name:" << payload.name << std::endl;
+
     auto status = calcite_client.dropTable(  payload );
-    std::cout << "status:" << status << std::endl;
   } catch (std::runtime_error &error) {
     // error with ddl query
     std::cout << error.what() << std::endl;
@@ -247,8 +254,8 @@ int main() {
   services.insert(std::make_pair(orchestrator::MessageType_RegisterFileSystem, &registerFileSystem));
   services.insert(std::make_pair(orchestrator::MessageType_DeregisterFileSystem, &deregisterFileSystem));
 
-  services.insert(std::make_pair(orchestrator::MessageType_LoadCSV, &loadCsv));
-  services.insert(std::make_pair(orchestrator::MessageType_LoadParquet, &loadParquet));
+  services.insert(std::make_pair(orchestrator::MessageType_LoadCsvSchema, &loadCsvSchema));
+  services.insert(std::make_pair(orchestrator::MessageType_LoadParquetSchema, &loadParquetSchema));
 
   auto orchestratorService = [&services](const blazingdb::protocol::Buffer &requestBuffer) -> blazingdb::protocol::Buffer {
     RequestMessage request{requestBuffer.data()};

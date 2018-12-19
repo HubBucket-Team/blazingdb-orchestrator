@@ -75,8 +75,8 @@ public:
     return responsePayload.getBufferData();
   }
 
-  std::shared_ptr<flatbuffers::DetachedBuffer> loadCsv( Buffer& buffer, int64_t access_token) {
-    auto bufferedData = MakeRequest(interpreter::MessageType_LoadCSV,
+  std::shared_ptr<flatbuffers::DetachedBuffer> loadCsvSchema( Buffer& buffer, int64_t access_token) {
+    auto bufferedData = MakeRequest(interpreter::MessageType_LoadCsvSchema,
                                      access_token,
                                      buffer
                                      );
@@ -92,8 +92,8 @@ public:
     return responsePayload.getBufferData();
   }
 
-  std::shared_ptr<flatbuffers::DetachedBuffer> loadParquet( Buffer& buffer, int64_t access_token) {
-    auto bufferedData = MakeRequest(interpreter::MessageType_LoadParquet,
+  std::shared_ptr<flatbuffers::DetachedBuffer> loadParquetSchema( Buffer& buffer, int64_t access_token) {
+    auto bufferedData = MakeRequest(interpreter::MessageType_LoadParquetSchema,
                                      access_token,
                                      buffer
                                      );
