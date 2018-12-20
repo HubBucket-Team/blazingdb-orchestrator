@@ -233,19 +233,24 @@ static result_pair ddlDropTableService(blazingdb::protocol::UnixSocketConnection
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 };
+#include <thread>
 
 
 int main() {
  
     blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
+    const int SLEEP_TIME{1000};  //!  Milliseconds.
 
-    for(size_t i = 0; i < 10000; i++)
-    {
+    for(size_t i = 0; i < 10000; i++) {
+        std::cout << "##iter: " << i << std::endl;
         orchestrator::DDLCreateTableRequestMessage create_message{"nation", "main", {}, {}};
         ddlCreateTableService(calcite_client_connection, 1, Buffer {create_message.getBufferData()});
+        // std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME));
 
         orchestrator::DDLDropTableRequestMessage drop_message{"nation", "main"};
         ddlDropTableService(calcite_client_connection, 1, Buffer {drop_message.getBufferData()});
+        // std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME));
+
     }
   return 0;
 }
