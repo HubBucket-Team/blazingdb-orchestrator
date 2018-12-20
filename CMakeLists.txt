@@ -37,3 +37,6 @@ find_package(Threads)
 
 add_executable(blazingdb_orchestator_service src/orchestrator-service/orchestator-service.cc)
 target_link_libraries(blazingdb_orchestator_service Threads::Threads ${FLATBUFFERS_STATIC_LIB} ${BLAZINGDB_PROTOCOL_STATIC_LIB})
+
+add_executable(mock_blazingdb_orchestator src/orchestrator-service/mock.cc)
+target_link_libraries(mock_blazingdb_orchestator Threads::Threads ${FLATBUFFERS_STATIC_LIB} ${BLAZINGDB_PROTOCOL_STATIC_LIB})
