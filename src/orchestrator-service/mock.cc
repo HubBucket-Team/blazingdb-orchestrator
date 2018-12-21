@@ -190,9 +190,10 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
 };
 
 
-static result_pair ddlCreateTableService(blazingdb::protocol::UnixSocketConnection &calcite_client_connection, uint64_t accessToken, Buffer&& buffer)  {
+static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer)  {
   std::cout << "###DDL Create Table: " << std::endl;
    try {
+    blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
     calcite::CalciteClient calcite_client{calcite_client_connection};
 
     orchestrator::DDLCreateTableRequestMessage payload(buffer.data());
@@ -213,10 +214,11 @@ static result_pair ddlCreateTableService(blazingdb::protocol::UnixSocketConnecti
 };
 
 
-static result_pair ddlDropTableService(blazingdb::protocol::UnixSocketConnection &calcite_client_connection, uint64_t accessToken, Buffer&& buffer)  {
+static result_pair ddlDropTableService(uint64_t accessToken, Buffer&& buffer)  {
   std::cout << "##DDL Drop Table: " << std::endl;
   
   try {
+    blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
     calcite::CalciteClient calcite_client{calcite_client_connection};
 
     orchestrator::DDLDropTableRequestMessage payload(buffer.data());
@@ -236,16 +238,13 @@ static result_pair ddlDropTableService(blazingdb::protocol::UnixSocketConnection
 
 
 int main() {
- 
-    blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
-
     for(size_t i = 0; i < 10000; i++)
     {
         orchestrator::DDLCreateTableRequestMessage create_message{"nation", "main", {}, {}};
-        ddlCreateTableService(calcite_client_connection, 1, Buffer {create_message.getBufferData()});
+        ddlCreateTableService(1, Buffer {create_message.getBufferData()});
 
         orchestrator::DDLDropTableRequestMessage drop_message{"nation", "main"};
-        ddlDropTableService(calcite_client_connection, 1, Buffer {drop_message.getBufferData()});
+        ddlDropTableService(1, Buffer {drop_message.getBufferData()});
     }
   return 0;
 }
