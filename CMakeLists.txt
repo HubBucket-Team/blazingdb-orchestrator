@@ -31,12 +31,17 @@ include(CTest)
 # Configure dependencies
 include(ConfigureFlatBuffers)
 include(ConfigureBlazingDBProtocol)
-include(ConfigureGoogleTest)
 
 find_package(Threads)
+find_package(ZeroMQ REQUIRED)
 
-add_executable(blazingdb_orchestator_service src/orchestrator-service/orchestator-service.cc)
-target_link_libraries(blazingdb_orchestator_service Threads::Threads ${FLATBUFFERS_STATIC_LIB} ${BLAZINGDB_PROTOCOL_STATIC_LIB})
+# BEGIN MAIN #
+include_directories(
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+# add_executable(blazingdb_orchestator_service src/orchestrator-service/orchestator-service.cc)
+# target_link_libraries(blazingdb_orchestator_service Threads::Threads libzmq-static ${FLATBUFFERS_STATIC_LIB} ${BLAZINGDB_PROTOCOL_STATIC_LIB})
 
 add_executable(mock_blazingdb_orchestator src/orchestrator-service/mock.cc)
-target_link_libraries(mock_blazingdb_orchestator Threads::Threads ${FLATBUFFERS_STATIC_LIB} ${BLAZINGDB_PROTOCOL_STATIC_LIB})
+target_link_libraries(mock_blazingdb_orchestator Threads::Threads libzmq-static ${FLATBUFFERS_STATIC_LIB} ${BLAZINGDB_PROTOCOL_STATIC_LIB})

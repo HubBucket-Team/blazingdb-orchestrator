@@ -14,7 +14,7 @@
 #include <cstdlib>     /* srand, rand */
 #include <ctime>       /* time */
 
-
+#include "zmq/zmq.hpp"
 
 using namespace blazingdb::protocol;
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
@@ -190,18 +190,61 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
 };
 
 
-static result_pair ddlCreateTableService(blazingdb::protocol::UnixSocketConnection &calcite_client_connection, uint64_t accessToken, Buffer&& buffer)  {
+
+Status createTable(zmq::socket_t &sender, orchestrator::DDLCreateTableRequestMessage& payload){
+  int64_t sessionToken = 0;
+  auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_CREATE_TABLE,
+                                    sessionToken,
+                                    payload);
+
+  
+  assert(bufferedData->size() == sender.send(bufferedData->data(), bufferedData->size()));
+  
+  zmq::message_t request_message;
+  sender.recv(&request_message);
+  Buffer responseBuffer((uint8_t*)request_message.data(), request_message.size());
+
+  ResponseMessage response{responseBuffer.data()};
+  if (response.getStatus() == Status_Error) {
+    ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
+    throw std::runtime_error(errorMessage.getMessage());
+  }
+  return response.getStatus();
+}
+
+Status dropTable(zmq::socket_t &sender, orchestrator::DDLDropTableRequestMessage& payload){
+  int64_t sessionToken = 0;
+  auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_DROP_TABLE,
+                                  sessionToken,
+                                  payload);
+
+  assert(bufferedData->size() == sender.send(bufferedData->data(), bufferedData->size()));
+  
+  zmq::message_t request_message;
+  sender.recv(&request_message);
+  Buffer responseBuffer((uint8_t*)request_message.data(), request_message.size());
+
+  ResponseMessage response{responseBuffer.data()};
+  if (response.getStatus() == Status_Error) {
+    ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
+    throw std::runtime_error(errorMessage.getMessage());
+  }
+  return response.getStatus();
+}
+
+
+
+static result_pair ddlCreateTableService(zmq::socket_t &sender, uint64_t accessToken, Buffer&& buffer)  {
   std::cout << "###DDL Create Table: " << std::endl;
    try {
-    calcite::CalciteClient calcite_client{calcite_client_connection};
-
     orchestrator::DDLCreateTableRequestMessage payload(buffer.data());
     std::cout << "bdname:" << payload.dbName << std::endl;
     std::cout << "table:" << payload.name << std::endl;
     for (auto col : payload.columnNames)
       std::cout << "\ntable.column:" << col << std::endl;
     
-    auto status = calcite_client.createTable(  payload );
+    auto status = createTable(sender,  payload );
+    std::cout << "status:" << status  << std::endl;
   } catch (std::runtime_error &error) {
      // error with ddl query
      std::cout << error.what() << std::endl;
@@ -213,17 +256,17 @@ static result_pair ddlCreateTableService(blazingdb::protocol::UnixSocketConnecti
 };
 
 
-static result_pair ddlDropTableService(blazingdb::protocol::UnixSocketConnection &calcite_client_connection, uint64_t accessToken, Buffer&& buffer)  {
+
+
+static result_pair ddlDropTableService(zmq::socket_t &sender, uint64_t accessToken, Buffer&& buffer)  {
   std::cout << "##DDL Drop Table: " << std::endl;
   
   try {
-    calcite::CalciteClient calcite_client{calcite_client_connection};
-
     orchestrator::DDLDropTableRequestMessage payload(buffer.data());
     std::cout << "cbname:" << payload.dbName << std::endl;
     std::cout << "table.name:" << payload.name << std::endl;
 
-    auto status = calcite_client.dropTable(  payload );
+    auto status = dropTable(sender,  payload );
   } catch (std::runtime_error &error) {
     // error with ddl query
     std::cout << error.what() << std::endl;
@@ -233,24 +276,33 @@ static result_pair ddlDropTableService(blazingdb::protocol::UnixSocketConnection
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 };
-#include <thread>
 
-
-int main() {
+int main () {
+    zmq::context_t context;
+    zmq::socket_t sender(context, ZMQ_REQ);
+    sender.connect("ipc:///tmp/calcite.socket");
  
-    blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
-    const int SLEEP_TIME{1000};  //!  Milliseconds.
-
     for(size_t i = 0; i < 10000; i++) {
         std::cout << "##iter: " << i << std::endl;
         orchestrator::DDLCreateTableRequestMessage create_message{"nation", "main", {}, {}};
-        ddlCreateTableService(calcite_client_connection, 1, Buffer {create_message.getBufferData()});
-        // std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME));
+        ddlCreateTableService(sender, 1, Buffer {create_message.getBufferData()});
 
         orchestrator::DDLDropTableRequestMessage drop_message{"nation", "main"};
-        ddlDropTableService(calcite_client_connection, 1, Buffer {drop_message.getBufferData()});
-        // std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME));
-
+        ddlDropTableService(sender, 1, Buffer {drop_message.getBufferData()});
     }
   return 0;
 }
+
+
+// int main () {
+//     zmq::context_t context;
+//     zmq::socket_t sender(context, ZMQ_REQ);
+//     sender.connect("ipc:///tmp/test.ipc");
+//     assert(2 == sender.send("Hi", 2));
+    
+//     zmq::message_t request_message;
+//     sender.recv(&request_message);
+//     printf("done.\n");
+//     printf("\t\tMessage: Size: %d ; Value: %s\n", static_cast<int>(request_message.size()), static_cast<const char*>(request_message.data()));
+//     return 0;
+// }
