@@ -21,8 +21,7 @@ using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffe
 
 static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   try {
-    blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
-    interpreter::InterpreterClient ral_client{ral_client_connection};
+    interpreter::InterpreterClient ral_client{};
     auto response = ral_client.registerFileSystem(accessToken, buffer);
 
   } catch (std::runtime_error &error) {
@@ -37,8 +36,7 @@ static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
 
 static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   try {
-    blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
-    interpreter::InterpreterClient ral_client{ral_client_connection};
+    interpreter::InterpreterClient ral_client{};
     blazingdb::message::io::FileSystemDeregisterRequestMessage message(buffer.data());
     auto response = ral_client.deregisterFileSystem(accessToken, message.getAuthority());
 
@@ -55,8 +53,7 @@ static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer) 
 static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
    try {
-    blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
-    interpreter::InterpreterClient ral_client{ral_client_connection};
+    interpreter::InterpreterClient ral_client{};
     resultBuffer = ral_client.loadCsvSchema(buffer, accessToken);
 
   } catch (std::runtime_error &error) {
@@ -72,8 +69,7 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
 static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
    try {
-    blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
-    interpreter::InterpreterClient ral_client{ral_client_connection};
+    interpreter::InterpreterClient ral_client{};
     resultBuffer = ral_client.loadParquetSchema(buffer, accessToken);
 
   } catch (std::runtime_error &error) {
@@ -96,8 +92,7 @@ static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buff
 
 
 static result_pair  closeConnectionService(uint64_t accessToken, Buffer&& buffer)  {
-  blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
-  interpreter::InterpreterClient ral_client{ral_client_connection};
+  interpreter::InterpreterClient ral_client{};
   try {
     auto status = ral_client.closeConnection(accessToken);
     std::cout << "status:" << status << std::endl;
@@ -116,16 +111,14 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
 
   try {
-    blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
-    calcite::CalciteClient calcite_client{calcite_client_connection};
+    calcite::CalciteClient calcite_client{};
     auto response = calcite_client.runQuery(query);
     auto logicalPlan = response.getLogicalPlan();
     auto time = response.getTime();
     std::cout << "plan:" << logicalPlan << std::endl;
     std::cout << "time:" << time << std::endl;
     try {
-      blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
-      interpreter::InterpreterClient ral_client{ral_client_connection};
+      interpreter::InterpreterClient ral_client{};
 
       auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan, requestPayload.tableGroup, accessToken);
       
@@ -156,16 +149,14 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
 
   try {
-    blazingdb::protocol::UnixSocketConnection calcite_client_connection{"/tmp/calcite.socket"};
-    calcite::CalciteClient calcite_client{calcite_client_connection};
+    calcite::CalciteClient calcite_client;
     auto response = calcite_client.runQuery(query);
     auto logicalPlan = response.getLogicalPlan();
     auto time = response.getTime();
     std::cout << "plan:" << logicalPlan << std::endl;
     std::cout << "time:" << time << std::endl;
     try {
-      blazingdb::protocol::UnixSocketConnection ral_client_connection{"/tmp/ral.socket"};
-      interpreter::InterpreterClient ral_client{ral_client_connection};
+      interpreter::InterpreterClient ral_client;
 
       auto executePlanResponseMessage = ral_client.executeDirectPlan(
           logicalPlan, requestPayload.getTableGroup(), accessToken);
@@ -278,18 +269,18 @@ static result_pair ddlDropTableService(zmq::socket_t &sender, uint64_t accessTok
 };
 
 int main () {
-    zmq::context_t context;
-    zmq::socket_t sender(context, ZMQ_REQ);
-    sender.connect("ipc:///tmp/calcite.socket");
- 
-    for(size_t i = 0; i < 10000; i++) {
-        std::cout << "##iter: " << i << std::endl;
-        orchestrator::DDLCreateTableRequestMessage create_message{"nation", "main", {}, {}};
-        ddlCreateTableService(sender, 1, Buffer {create_message.getBufferData()});
+  zmq::context_t context;
+  zmq::socket_t sender(context, ZMQ_REQ);
+  sender.connect("ipc:///tmp/calcite.socket");
 
-        orchestrator::DDLDropTableRequestMessage drop_message{"nation", "main"};
-        ddlDropTableService(sender, 1, Buffer {drop_message.getBufferData()});
-    }
+  for(size_t i = 0; i < 10000; i++) {
+      std::cout << "##iter: " << i << std::endl;
+      orchestrator::DDLCreateTableRequestMessage create_message;
+      ddlCreateTableService(sender, 1, Buffer {create_message.getBufferData()});
+
+      orchestrator::DDLDropTableRequestMessage drop_message;
+      ddlDropTableService(sender, 1, Buffer {drop_message.getBufferData()});
+  }
   return 0;
 }
 

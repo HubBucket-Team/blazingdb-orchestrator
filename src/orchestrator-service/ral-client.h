@@ -16,7 +16,7 @@ namespace interpreter {
 
 class InterpreterClient {
 public:
-  InterpreterClient(blazingdb::protocol::Connection & connection) : client {connection}
+  InterpreterClient() : client {"ipc:///tmp/ral.socket"}
   {}
 
   ExecutePlanResponseMessage
@@ -169,7 +169,7 @@ public:
   }
 
 protected:
-  blazingdb::protocol::Client client;
+  blazingdb::protocol::ZeroMqClient client;
 };
 
 

@@ -16,7 +16,7 @@ namespace calcite {
 
 class CalciteClient {
 public:
-  CalciteClient(blazingdb::protocol::Connection& con) : client { con }
+  CalciteClient() : client { "ipc:///tmp/calcite.socket" }
   {}
 
   DMLResponseMessage runQuery(std::string query) {
@@ -77,7 +77,7 @@ public:
   }
 
 private:
-  blazingdb::protocol::Client client;
+  blazingdb::protocol::ZeroMqClient client;
 };
 
 
