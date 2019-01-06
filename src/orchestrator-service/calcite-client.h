@@ -19,22 +19,33 @@ public:
   CalciteClient() : client { "ipc:///tmp/calcite.socket" }
   {}
 
+  static CalciteClient& instance(){
+    static CalciteClient singleton;
+    return singleton; 
+  }
+
   DMLResponseMessage runQuery(std::string query) {
     int64_t sessionToken = 0;
+
+    DMLRequestMessage message{query};
     auto    bufferedData = MakeRequest(
-        calcite::MessageType_DML, sessionToken, DMLRequestMessage{query});
+        calcite::MessageType_DML, sessionToken, message);
     Buffer responseBuffer = client.send(bufferedData);
     auto   response       = MakeResponse<DMLResponseMessage>(responseBuffer);
     return response;
   }
 
-  Status createTable(orchestrator::DDLCreateTableRequestMessage& payload){
+  Status createTable(orchestrator::DDLCreateTableRequestMessage& message){
     int64_t sessionToken = 0;
     auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_CREATE_TABLE,
                                      sessionToken,
-                                     payload);
+                                     message);
 
     Buffer responseBuffer = client.send(bufferedData);
+    if (responseBuffer.size() == 0) {
+      throw std::runtime_error("Orchestrattor::CreateTable failed! responseBuffer from calcite is zero");
+    }
+    
     ResponseMessage response{responseBuffer.data()};
     if (response.getStatus() == Status_Error) {
       ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
@@ -50,6 +61,9 @@ public:
                                     payload);
 
     Buffer responseBuffer = client.send(bufferedData);
+    if (responseBuffer.size() == 0) {
+      throw std::runtime_error("Orchestrattor::DropTable failed! responseBuffer from calcite is zero");
+    }
     ResponseMessage response{responseBuffer.data()};
     if (response.getStatus() == Status_Error) {
       ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
@@ -58,23 +72,6 @@ public:
     return response.getStatus();
   }
 
-
-  Status updateSchema(std::string query)    {
-
-    int64_t sessionToken = 0;
-    auto bufferedData = MakeRequest(calcite::MessageType_DDL,
-                                     sessionToken,
-                                     DDLRequestMessage{query});
-
-    Buffer responseBuffer = client.send(bufferedData);
-
-    ResponseMessage response{responseBuffer.data()};
-    if (response.getStatus() == Status_Error) {
-      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-      throw std::runtime_error(errorMessage.getMessage());
-    }
-    return response.getStatus();
-  }
 
 private:
   blazingdb::protocol::ZeroMqClient client;

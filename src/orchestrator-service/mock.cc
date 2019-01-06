@@ -21,7 +21,7 @@ Status createTable(blazingdb::protocol::ZeroMqClient &sender, orchestrator::DDLC
   int64_t sessionToken = 0;
   auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_CREATE_TABLE,
                                     sessionToken,
-                                    payload);
+                                    Buffer{payload.getBufferData()});
   auto responseBuffer = sender.send(bufferedData);
   ResponseMessage response{responseBuffer.data()};
   if (response.getStatus() == Status_Error) {
@@ -35,7 +35,7 @@ Status dropTable(blazingdb::protocol::ZeroMqClient &sender, orchestrator::DDLDro
   int64_t sessionToken = 0;
   auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_DROP_TABLE,
                                   sessionToken,
-                                  payload);
+                                  payload.getPayloadBuffer());
   auto responseBuffer = sender.send(bufferedData);
   ResponseMessage response{responseBuffer.data()};
   if (response.getStatus() == Status_Error) {
