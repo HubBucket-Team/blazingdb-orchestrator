@@ -16,17 +16,23 @@ namespace interpreter {
 
 class InterpreterClient {
 public:
-  InterpreterClient(blazingdb::protocol::Connection & connection) : client {connection}
+  InterpreterClient() : client {"ipc:///tmp/ral.socket"}
   {}
+
+  static InterpreterClient& instance(){
+    static InterpreterClient singleton;
+    return singleton; 
+  }
 
   ExecutePlanResponseMessage
   executeDirectPlan(std::string                            logicalPlan,
                     const blazingdb::protocol::TableGroup *tableGroup,
                     int64_t                                access_token) {
+    ExecutePlanDirectRequestMessage message{logicalPlan, tableGroup};
     auto bufferedData =
         MakeRequest(interpreter::MessageType_ExecutePlan,
                     access_token,
-                    ExecutePlanDirectRequestMessage{logicalPlan, tableGroup});
+                    message);
 
     Buffer          responseBuffer = client.send(bufferedData);
     ResponseMessage response{responseBuffer.data()};
@@ -42,10 +48,13 @@ public:
   ExecutePlanResponseMessage executeFSDirectPlan(std::string logicalPlan,
                     blazingdb::message::io::FileSystemTableGroupSchema& tableGroup,
                     int64_t                                access_token) {
+    
+    blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup};
+
     auto bufferedData =
         MakeRequest(interpreter::MessageType_ExecutePlanFileSystem,
                     access_token,
-                    blazingdb::message::io::FileSystemDMLRequestMessage{logicalPlan, tableGroup});
+                    message);
 
 
     Buffer          responseBuffer = client.send(bufferedData);
@@ -60,9 +69,10 @@ public:
   }
 
   std::shared_ptr<flatbuffers::DetachedBuffer> executePlan(std::string logicalPlan, const ::blazingdb::protocol::TableGroupDTO &tableGroup, int64_t access_token)  {
+    ExecutePlanRequestMessage message{logicalPlan, tableGroup};
     auto bufferedData = MakeRequest(interpreter::MessageType_ExecutePlan,
                                      access_token,
-                                     ExecutePlanRequestMessage{logicalPlan, tableGroup});
+                                     message);
 
     Buffer responseBuffer = client.send(bufferedData);
     ResponseMessage response{responseBuffer.data()};
@@ -110,9 +120,10 @@ public:
   }
 
   std::vector<::gdf_dto::gdf_column> getResult(uint64_t resultToken, int64_t access_token){
+    interpreter::GetResultRequestMessage payload{resultToken};
     auto bufferedData = MakeRequest(interpreter::MessageType_GetResult,
                                      access_token,
-                                     interpreter::GetResultRequestMessage {resultToken});
+                                     payload);
 
     Buffer responseBuffer = client.send(bufferedData);
     ResponseMessage response{responseBuffer.data()};
@@ -130,9 +141,10 @@ public:
   }
 
   Status closeConnection (int64_t access_token) {
+    auto payload_buffer = Buffer{};
     auto bufferedData = MakeRequest(interpreter::MessageType_CloseConnection,
                                     access_token,
-                                    ZeroMessage{});
+                                    payload_buffer);
     Buffer responseBuffer = client.send(bufferedData);
     ResponseMessage response{responseBuffer.data()};
     if (response.getStatus() == Status_Error) {
@@ -156,9 +168,10 @@ public:
   }
   
   Status deregisterFileSystem(int64_t access_token, const std::string& authority) {
+    blazingdb::message::io::FileSystemDeregisterRequestMessage payload{authority};
     auto bufferedData = MakeRequest(interpreter::MessageType_DeregisterFileSystem,
                                     access_token,
-                                    blazingdb::message::io::FileSystemDeregisterRequestMessage{authority});
+                                    payload);
     Buffer responseBuffer = client.send(bufferedData);
     ResponseMessage response{responseBuffer.data()};
     if (response.getStatus() == Status_Error) {
@@ -169,7 +182,7 @@ public:
   }
 
 protected:
-  blazingdb::protocol::Client client;
+  blazingdb::protocol::ZeroMqClient client;
 };
 
 
