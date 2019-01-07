@@ -6,6 +6,12 @@
 # BEGIN macros
 
 macro(CONFIGURE_BLAZINGDB_PROTOCOL_EXTERNAL_PROJECT)
+    if (NOT BLAZINGDB_PROTOCOL_BRANCH)
+        set(BLAZINGDB_PROTOCOL_BRANCH "develop")
+    endif()
+
+    message(STATUS "Using BLAZINGDB_PROTOCOL_BRANCH: ${BLAZINGDB_PROTOCOL_BRANCH}")
+
     # Download and unpack blazingdb-protocol at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/BlazingDBProtocol.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-protocol-download/CMakeLists.txt)
 
