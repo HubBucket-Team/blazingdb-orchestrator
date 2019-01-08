@@ -79,3 +79,6 @@ google-flatbuffers_ep-prefix
 
 #generated binaries (in source)
 blazingdb_orchestator_service
+
+#Qt Creator files
+CMakeLists.txt.user

@@ -6,6 +6,12 @@
 # BEGIN macros
 
 macro(CONFIGURE_BLAZINGDB_PROTOCOL_EXTERNAL_PROJECT)
+    if (NOT BLAZINGDB_PROTOCOL_BRANCH)
+        set(BLAZINGDB_PROTOCOL_BRANCH "develop")
+    endif()
+
+    message(STATUS "Using BLAZINGDB_PROTOCOL_BRANCH: ${BLAZINGDB_PROTOCOL_BRANCH}")
+
     # Download and unpack blazingdb-protocol at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/BlazingDBProtocol.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-protocol-download/CMakeLists.txt)
 
@@ -34,11 +40,11 @@ endmacro()
 
 # BEGIN MAIN #
 
-if (BLAZINGDB_PROTOCOL_HOME)
-    message(STATUS "BLAZINGDB_PROTOCOL_HOME defined, it will use vendor version from ${BLAZINGDB_PROTOCOL_HOME}")
-    set(BLAZINGDB_PROTOCOL_ROOT "${BLAZINGDB_PROTOCOL_HOME}")
+if (BLAZINGDB_PROTOCOL_INSTALL_DIR)
+    message(STATUS "BLAZINGDB_PROTOCOL_INSTALL_DIR defined, it will use vendor version from ${BLAZINGDB_PROTOCOL_INSTALL_DIR}")
+    set(BLAZINGDB_PROTOCOL_ROOT "${BLAZINGDB_PROTOCOL_INSTALL_DIR}")
 else()
-    message(STATUS "BLAZINGDB_PROTOCOL_HOME not defined, it will be built from sources")
+    message(STATUS "BLAZINGDB_PROTOCOL_INSTALL_DIR not defined, it will be built from sources")
     configure_blazingdb_protocol_external_project()
     set(BLAZINGDB_PROTOCOL_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-protocol-install/")
 endif()

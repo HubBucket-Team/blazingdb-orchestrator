@@ -1,63 +1,74 @@
-# Copyright 2014 Stefan.Eilemann@epfl.ch
-# Copyright 2014 Google Inc. All rights reserved.
+#=============================================================================
+# Copyright 2018 BlazingDB, Inc.
+#     Copyright 2018 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
+#=============================================================================
+
+# - Find FlatBuffers
+# FLATBUFFERS_HOME hints the install location (directory where you flatbuffers is installed)
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# This module defines
+# FLATBUFFERS_FOUND
+# FLATBUFFERS_FLATC_EXECUTABLE
+# FLATBUFFERS_INCLUDEDIR Preferred include directory e.g. <prefix>/include
+# FLATBUFFERS_INCLUDE_DIR, directory containing flatbuffers headers
+# FLATBUFFERS_LIBS, flatbuffers libraries
+# FLATBUFFERS_LIBDIR, directory containing flatbuffers libraries
+# FLATBUFFERS_STATIC_LIB, path to flatbuffers.a
+# flatbuffers - static library
 
-# Find the flatbuffers schema compiler
-#
-# Output Variables:
-# * FLATBUFFERS_FLATC_EXECUTABLE the flatc compiler executable
-# * FLATBUFFERS_FOUND
-#
-# Provides:
-# * FLATBUFFERS_GENERATE_C_HEADERS(Name <files>) creates the C++ headers
-#   for the given flatbuffer schema files.
-#   Returns the header files in ${Name}_OUTPUTS
-
-set(FLATBUFFERS_FLATC_EXECUTABLE ${FLATBUFFERS_HOME}/bin/flatc)
-set(FLATBUFFERS_INCLUDE_DIR ${FLATBUFFERS_HOME}/include)
-
-set(FLATBUFFERS_CMAKE_DIR ${CMAKE_CURRENT_LIST_DIR})
-
-find_program(FLATBUFFERS_FLATC_EXECUTABLE NAMES flatc)
-find_path(FLATBUFFERS_INCLUDE_DIR NAMES flatbuffers/flatbuffers.h)
-
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(flatbuffers
-  DEFAULT_MSG FLATBUFFERS_FLATC_EXECUTABLE FLATBUFFERS_INCLUDE_DIR)
-
-if(FLATBUFFERS_FOUND)
-  function(FLATBUFFERS_GENERATE_C_HEADERS Name)
-    set(FLATC_OUTPUTS)
-    foreach(FILE ${ARGN})
-      get_filename_component(FLATC_OUTPUT ${FILE} NAME_WE)
-      set(FLATC_OUTPUT
-        "${CMAKE_CURRENT_BINARY_DIR}/${FLATC_OUTPUT}_generated.h")
-      list(APPEND FLATC_OUTPUTS ${FLATC_OUTPUT})
-
-      add_custom_command(OUTPUT ${FLATC_OUTPUT}
-        COMMAND ${FLATBUFFERS_FLATC_EXECUTABLE}
-        ARGS -c -o "${CMAKE_CURRENT_BINARY_DIR}/" ${FILE}
-        COMMENT "Building C++ header for ${FILE}"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    endforeach()
-    set(${Name}_OUTPUTS ${FLATC_OUTPUTS} PARENT_SCOPE)
-  endfunction()
-
-  set(FLATBUFFERS_INCLUDE_DIRS ${FLATBUFFERS_INCLUDE_DIR})
-  include_directories(${CMAKE_BINARY_DIR})
-else()
-  set(FLATBUFFERS_INCLUDE_DIR)
+# If FLATBUFFERS_HOME is not defined try to search in the default system path
+if ("${FLATBUFFERS_HOME}" STREQUAL "")
+    set(FLATBUFFERS_HOME "/usr")
 endif()
 
-include("${FLATBUFFERS_CMAKE_DIR}/BuildFlatBuffers.cmake")
+set(FLATBUFFERS_SEARCH_LIB_PATH
+  ${FLATBUFFERS_HOME}/lib
+  ${FLATBUFFERS_HOME}/lib/x86_64-linux-gnu
+  ${FLATBUFFERS_HOME}/lib64
+  ${FLATBUFFERS_HOME}/build
+)
+
+set(FLATBUFFERS_SEARCH_INCLUDE_DIR
+  ${FLATBUFFERS_HOME}/include/flatbuffers/
+)
+
+find_path(FLATBUFFERS_INCLUDE_DIR flatbuffers.h
+    PATHS ${FLATBUFFERS_SEARCH_INCLUDE_DIR}
+    NO_DEFAULT_PATH
+    DOC "Path to flatbuffers headers"
+)
+
+find_library(FLATBUFFERS_STATIC_LIB NAMES libflatbuffers.a
+    PATHS ${FLATBUFFERS_SEARCH_LIB_PATH}
+    NO_DEFAULT_PATH
+    DOC "Path to flatbuffers static library"
+)
+
+set(FLATBUFFERS_FLATC_EXECUTABLE ${FLATBUFFERS_HOME}/bin/flatc)
+find_program(FLATBUFFERS_FLATC_EXECUTABLE NAMES flatc)
+
+if (NOT FLATBUFFERS_STATIC_LIB)
+    message(FATAL_ERROR "flatbuffers includes and libraries NOT found. "
+      "Looked for headers in ${FLATBUFFERS_SEARCH_INCLUDE_DIR}, "
+      "and for libs in ${FLATBUFFERS_SEARCH_LIB_PATH}")
+    set(FLATBUFFERS_FOUND FALSE)
+else()
+    set(FLATBUFFERS_INCLUDEDIR ${FLATBUFFERS_HOME}/include/)
+    set(FLATBUFFERS_LIBDIR ${FLATBUFFERS_HOME}/lib)
+    set(FLATBUFFERS_FOUND TRUE)
+    add_library(flatbuffers STATIC IMPORTED)
+    set_target_properties(flatbuffers PROPERTIES IMPORTED_LOCATION "${FLATBUFFERS_STATIC_LIB}")
+endif ()
+
+mark_as_advanced(
+    FLATBUFFERS_FOUND
+    FLATBUFFERS_FLATC_EXECUTABLE
+    FLATBUFFERS_INCLUDEDIR
+    FLATBUFFERS_INCLUDE_DIR
+    FLATBUFFERS_LIBS
+    FLATBUFFERS_STATIC_LIB
+    flatbuffers
+)
+
+set(FLATBUFFERS_CMAKE_DIR ${CMAKE_CURRENT_LIST_DIR})
+include(${FLATBUFFERS_CMAKE_DIR}/BuildFlatBuffers.cmake)
