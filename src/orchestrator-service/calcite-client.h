@@ -16,12 +16,14 @@ namespace calcite {
 
 class CalciteClient {
 public:
-  CalciteClient() : client { "ipc:///tmp/calcite.socket" }
-  {}
+  CalciteClient()
+      // TODO: remove global. @see main()
+      : connection(globalCalciteIphost, globalCalcitePort), client(connection) {
+  }
 
   static CalciteClient& instance(){
     static CalciteClient singleton;
-    return singleton; 
+    return singleton;
   }
 
   DMLResponseMessage runQuery(std::string query) {
@@ -45,7 +47,7 @@ public:
     if (responseBuffer.size() == 0) {
       throw std::runtime_error("Orchestrattor::CreateTable failed! responseBuffer from calcite is zero");
     }
-    
+
     ResponseMessage response{responseBuffer.data()};
     if (response.getStatus() == Status_Error) {
       ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
@@ -74,7 +76,8 @@ public:
 
 
 private:
-  blazingdb::protocol::ZeroMqClient client;
+  blazingdb::protocol::TCPConnection connection;
+  blazingdb::protocol::Client client;
 };
 
 
