@@ -20,11 +20,6 @@ public:
       // TODO: remove global. @see main()
       : connection(globalRalIphost, globalRalPort), client(connection) {}
 
-  static InterpreterClient& instance(){
-    static InterpreterClient singleton;
-    return singleton;
-  }
-
   ExecutePlanResponseMessage
   executeDirectPlan(std::string                            logicalPlan,
                     const blazingdb::protocol::TableGroup *tableGroup,

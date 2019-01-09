@@ -26,7 +26,7 @@ using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffe
 
 static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   try {
-    interpreter::InterpreterClient& ral_client = interpreter::InterpreterClient::instance();
+    interpreter::InterpreterClient ral_client;
     auto response = ral_client.registerFileSystem(accessToken, buffer);
 
   } catch (std::runtime_error &error) {
@@ -41,7 +41,7 @@ static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
 
 static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   try {
-    interpreter::InterpreterClient& ral_client = interpreter::InterpreterClient::instance();
+    interpreter::InterpreterClient ral_client;
     blazingdb::message::io::FileSystemDeregisterRequestMessage message(buffer.data());
     auto response = ral_client.deregisterFileSystem(accessToken, message.getAuthority());
 
@@ -58,7 +58,7 @@ static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer) 
 static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
    try {
-    interpreter::InterpreterClient& ral_client = interpreter::InterpreterClient::instance();
+    interpreter::InterpreterClient ral_client;
     resultBuffer = ral_client.loadCsvSchema(buffer, accessToken);
 
   } catch (std::runtime_error &error) {
@@ -74,7 +74,7 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
 static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
    try {
-    interpreter::InterpreterClient& ral_client = interpreter::InterpreterClient::instance();
+    interpreter::InterpreterClient ral_client;
     resultBuffer = ral_client.loadParquetSchema(buffer, accessToken);
 
   } catch (std::runtime_error &error) {
@@ -97,7 +97,7 @@ static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buff
 
 
 static result_pair  closeConnectionService(uint64_t accessToken, Buffer&& buffer)  {
-  interpreter::InterpreterClient& ral_client = interpreter::InterpreterClient::instance();
+  interpreter::InterpreterClient ral_client;
   try {
     auto status = ral_client.closeConnection(accessToken);
     std::cout << "status:" << status << std::endl;
@@ -123,7 +123,7 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
     std::cout << "plan:" << logicalPlan << std::endl;
     std::cout << "time:" << time << std::endl;
     try {
-      interpreter::InterpreterClient& ral_client = interpreter::InterpreterClient::instance();
+      interpreter::InterpreterClient ral_client;
 
       auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan, requestPayload.tableGroup, accessToken);
 
@@ -161,7 +161,7 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
     std::cout << "plan:" << logicalPlan << std::endl;
     std::cout << "time:" << time << std::endl;
     try {
-      interpreter::InterpreterClient& ral_client = interpreter::InterpreterClient::instance();
+      interpreter::InterpreterClient ral_client;
 
       auto executePlanResponseMessage = ral_client.executeDirectPlan(
           logicalPlan, requestPayload.getTableGroup(), accessToken);
