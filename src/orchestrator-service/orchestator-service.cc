@@ -245,9 +245,9 @@ auto orchestratorService(const blazingdb::protocol::Buffer &requestBuffer) -> bl
 
 int
 main(int argc, const char *argv[]) {
-  if (5 != argc) {
+  if (6 != argc) {
     std::cout << "usage: " << argv[0]
-              << "<ORCHESTRATOR_PORT> <CALCITE_[IP|HOSTNAME]> <CALCITE_PORT> "
+              << " <ORCHESTRATOR_PORT> <CALCITE_[IP|HOSTNAME]> <CALCITE_PORT> "
                  "<RAL_[IP|HOSTNAME]> <RAL_PORT>"
               << std::endl;
     return 1;
