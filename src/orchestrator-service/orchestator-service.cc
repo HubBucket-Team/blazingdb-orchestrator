@@ -116,7 +116,7 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
 
   try {
-    calcite::CalciteClient& calcite_client = calcite::CalciteClient::instance();
+    calcite::CalciteClient calcite_client;
     auto response = calcite_client.runQuery(query);
     auto logicalPlan = response.getLogicalPlan();
     auto time = response.getTime();
@@ -154,7 +154,7 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
 
   try {
-    calcite::CalciteClient& calcite_client = calcite::CalciteClient::instance();
+    calcite::CalciteClient calcite_client;
     auto response = calcite_client.runQuery(query);
     auto logicalPlan = response.getLogicalPlan();
     auto time = response.getTime();
@@ -189,7 +189,7 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
 static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer)  {
   std::cout << "###DDL Create Table: " << std::endl;
    try {
-    calcite::CalciteClient& calcite_client = calcite::CalciteClient::instance();
+    calcite::CalciteClient calcite_client;
 
     orchestrator::DDLCreateTableRequestMessage payload(buffer.data());
     std::cout << "bdname:" << payload.dbName << std::endl;
@@ -213,7 +213,7 @@ static result_pair ddlDropTableService(uint64_t accessToken, Buffer&& buffer)  {
   std::cout << "##DDL Drop Table: " << std::endl;
 
   try {
-    calcite::CalciteClient& calcite_client = calcite::CalciteClient::instance();
+    calcite::CalciteClient calcite_client;
 
     orchestrator::DDLDropTableRequestMessage payload(buffer.data());
     std::cout << "cbname:" << payload.dbName << std::endl;

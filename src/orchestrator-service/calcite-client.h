@@ -21,11 +21,6 @@ public:
       : connection(globalCalciteIphost, globalCalcitePort), client(connection) {
   }
 
-  static CalciteClient& instance(){
-    static CalciteClient singleton;
-    return singleton;
-  }
-
   DMLResponseMessage runQuery(std::string query) {
     int64_t sessionToken = 0;
 
