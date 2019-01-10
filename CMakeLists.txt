@@ -31,7 +31,6 @@ include(CTest)
 # Configure dependencies
 include(ConfigureFlatBuffers)
 include(ConfigureBlazingDBProtocol)
-include(ConfigureZeroMQ)
 
 find_package(Threads)
 

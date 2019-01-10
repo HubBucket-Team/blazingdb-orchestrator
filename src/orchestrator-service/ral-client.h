@@ -16,13 +16,9 @@ namespace interpreter {
 
 class InterpreterClient {
 public:
-  InterpreterClient() : client {"ipc:///tmp/ral.socket"}
-  {}
-
-  static InterpreterClient& instance(){
-    static InterpreterClient singleton;
-    return singleton; 
-  }
+  InterpreterClient()
+      // TODO: remove global. @see main()
+      : connection(globalRalIphost, globalRalPort), client(connection) {}
 
   ExecutePlanResponseMessage
   executeDirectPlan(std::string                            logicalPlan,
@@ -48,7 +44,7 @@ public:
   ExecutePlanResponseMessage executeFSDirectPlan(std::string logicalPlan,
                     blazingdb::message::io::FileSystemTableGroupSchema& tableGroup,
                     int64_t                                access_token) {
-    
+
     blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup};
 
     auto bufferedData =
@@ -166,7 +162,7 @@ public:
     }
     return response.getStatus();
   }
-  
+
   Status deregisterFileSystem(int64_t access_token, const std::string& authority) {
     blazingdb::message::io::FileSystemDeregisterRequestMessage payload{authority};
     auto bufferedData = MakeRequest(interpreter::MessageType_DeregisterFileSystem,
@@ -182,7 +178,8 @@ public:
   }
 
 protected:
-  blazingdb::protocol::ZeroMqClient client;
+  blazingdb::protocol::TCPConnection connection;
+  blazingdb::protocol::Client client;
 };
 
 
