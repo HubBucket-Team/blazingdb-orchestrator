@@ -18,7 +18,7 @@ class InterpreterClient {
 public:
   InterpreterClient()
       // TODO: remove global. @see main()
-      : connection(globalRalIphost, globalRalPort), client(connection) {}
+      : connection("/tmp/ral.socket"), client(connection) {}
 
   ExecutePlanResponseMessage
   executeDirectPlan(std::string                            logicalPlan,
@@ -178,7 +178,7 @@ public:
   }
 
 protected:
-  blazingdb::protocol::TCPConnection connection;
+  blazingdb::protocol::UnixSocketConnection connection;
   blazingdb::protocol::Client client;
 };
 

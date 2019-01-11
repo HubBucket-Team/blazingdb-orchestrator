@@ -259,7 +259,7 @@ main(int argc, const char *argv[]) {
   globalRalIphost        = argv[4];
   globalRalPort          = argv[5];
 
-  blazingdb::protocol::TCPConnection connection("", globalOrchestratorPort);
+  blazingdb::protocol::UnixSocketConnection connection("/tmp/orchestrator.socket");
   blazingdb::protocol::Server server(connection);
 
   services.insert(std::make_pair(orchestrator::MessageType_DML, &dmlService));
