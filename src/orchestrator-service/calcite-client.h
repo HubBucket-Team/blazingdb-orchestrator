@@ -18,7 +18,7 @@ class CalciteClient {
 public:
   CalciteClient()
       // TODO: remove global. @see main()
-      : connection(globalCalciteIphost, globalCalcitePort), client(connection) {
+      : connection("/tmp/calcite.socket"), client(connection) {
   }
 
   DMLResponseMessage runQuery(std::string query) {
@@ -71,7 +71,7 @@ public:
 
 
 private:
-  blazingdb::protocol::TCPConnection connection;
+  blazingdb::protocol::UnixSocketConnection connection;
   blazingdb::protocol::Client client;
 };
 
