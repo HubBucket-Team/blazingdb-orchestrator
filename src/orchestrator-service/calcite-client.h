@@ -16,9 +16,9 @@ namespace calcite {
 
 class CalciteClient {
 public:
-  static CalciteClient &instance() {
-    static CalciteClient singleton;
-    return singleton;
+  CalciteClient()
+      // TODO: remove global. @see main()
+      : connection("/tmp/calcite.socket"), client(connection) {
   }
 
   DMLResponseMessage runQuery(std::string query) {
@@ -71,11 +71,6 @@ public:
 
 
 private:
-  CalciteClient()
-      // TODO: remove global. @see main()
-      : connection("/tmp/calcite.socket"), client(connection) {
-  }
-
   blazingdb::protocol::UnixSocketConnection connection;
   blazingdb::protocol::Client client;
 };

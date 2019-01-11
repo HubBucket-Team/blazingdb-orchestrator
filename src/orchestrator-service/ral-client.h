@@ -16,10 +16,9 @@ namespace interpreter {
 
 class InterpreterClient {
 public:
-  static InterpreterClient &instance() {
-    static InterpreterClient singleton;
-    return singleton;
-  }
+  InterpreterClient()
+      // TODO: remove global. @see main()
+      : connection("/tmp/ral.socket"), client(connection) {}
 
   ExecutePlanResponseMessage
   executeDirectPlan(std::string                            logicalPlan,
@@ -181,11 +180,6 @@ public:
 protected:
   blazingdb::protocol::UnixSocketConnection connection;
   blazingdb::protocol::Client client;
-
-private:
-  InterpreterClient()
-      // TODO: remove global. @see main()
-      : connection("/tmp/ral.socket"), client(connection) {}
 };
 
 
