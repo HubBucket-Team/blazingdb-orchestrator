@@ -245,19 +245,20 @@ auto orchestratorService(const blazingdb::protocol::Buffer &requestBuffer) -> bl
 
 int
 main(int argc, const char *argv[]) {
-  if (6 != argc) {
-    std::cout << "usage: " << argv[0]
-              << " <ORCHESTRATOR_PORT> <CALCITE_[IP|HOSTNAME]> <CALCITE_PORT> "
-                 "<RAL_[IP|HOSTNAME]> <RAL_PORT>"
-              << std::endl;
-    return 1;
-  }
+//  if (6 != argc) {
+//    std::cout << "usage: " << argv[0]
+//              << " <ORCHESTRATOR_PORT> <CALCITE_[IP|HOSTNAME]> <CALCITE_PORT> "
+//                 "<RAL_[IP|HOSTNAME]> <RAL_PORT>"
+//              << std::endl;
+//    return 1;
+//  }
+//    globalOrchestratorPort = argv[1];
+//    globalCalciteIphost    = argv[2];
+//    globalCalcitePort      = argv[3];
+//    globalRalIphost        = argv[4];
+//    globalRalPort          = argv[5];
 
-  globalOrchestratorPort = argv[1];
-  globalCalciteIphost    = argv[2];
-  globalCalcitePort      = argv[3];
-  globalRalIphost        = argv[4];
-  globalRalPort          = argv[5];
+  std::cout << "Orchestrator is listening" << std::endl;
 
   blazingdb::protocol::UnixSocketConnection connection("/tmp/orchestrator.socket");
   blazingdb::protocol::Server server(connection);
