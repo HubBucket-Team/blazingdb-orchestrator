@@ -249,7 +249,7 @@ main(int argc, const char *argv[]) {
     std::cout << "Orchestrator starting" << std::endl;
 
   #ifndef VERBOSE
-  std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
+  std::cout.rdbuf(nullptr); 
   #endif // VERBOSE 
 
   blazingdb::protocol::UnixSocketConnection connection("/tmp/orchestrator.socket");
