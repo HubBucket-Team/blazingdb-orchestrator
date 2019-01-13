@@ -246,7 +246,7 @@ auto orchestratorService(const blazingdb::protocol::Buffer &requestBuffer) -> bl
 int
 main(int argc, const char *argv[]) {
   #ifndef VERBOSE
-  std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
+  std::cout.rdbuf(nullptr); 
   #endif // VERBOSE 
 
   blazingdb::protocol::UnixSocketConnection connection("/tmp/orchestrator.socket");
