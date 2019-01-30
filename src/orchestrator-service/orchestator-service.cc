@@ -2,6 +2,9 @@
 #include <map>
 #include <tuple>
 #include <blazingdb/protocol/api.h>
+#include <vector>
+#include <string>
+#include <future>
 
 // TODO: remove global
 std::string globalOrchestratorPort;
@@ -23,6 +26,10 @@ std::string globalRalPort;
 
 using namespace blazingdb::protocol;
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
+
+int ral_quantity = 0;
+std::vector<std::string> sockets;
+std::vector<std::future<result_pair>> futures;
 
 static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   try {
@@ -113,38 +120,55 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
   blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
   auto query = requestPayload.statement;
   std::cout << "##DML-FS: " << query << std::endl;
-  std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
 
-  try {
-    calcite::CalciteClient calcite_client;
-    auto response = calcite_client.runQuery(query);
-    auto logicalPlan = response.getLogicalPlan();
-    auto time = response.getTime();
-    std::cout << "plan:" << logicalPlan << std::endl;
-    std::cout << "time:" << time << std::endl;
-    try {
-      interpreter::InterpreterClient ral_client;
+    for (auto& socket : sockets) {
+        futures.emplace_back(std::async([&]() {
+            try {
+              //std::cout << "TASK: " << socket << std::endl;
 
-      auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan, requestPayload.tableGroup, accessToken);
+              calcite::CalciteClient calcite_client;
+              auto response = calcite_client.runQuery(query);
+              auto logicalPlan = response.getLogicalPlan();
+              auto time = response.getTime();
+              std::cout << "plan:" << logicalPlan << std::endl;
+              std::cout << "time:" << time << std::endl;
+              try {
+                interpreter::InterpreterClient ral_client(socket);
 
-      auto nodeInfo = executePlanResponseMessage.getNodeInfo();
-      auto dmlResponseMessage = orchestrator::DMLResponseMessage(
-          executePlanResponseMessage.getResultToken(),
-          nodeInfo, time);
-      resultBuffer = dmlResponseMessage.getBufferData();
-    } catch (std::runtime_error &error) {
-      // error with query plan: not resultToken
-      std::cout << error.what() << std::endl;
-      ResponseErrorMessage errorMessage{ std::string{error.what()} };
-      return std::make_pair(Status_Error, errorMessage.getBufferData());
+                auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan,
+                                                                                 requestPayload.tableGroup,
+                                                                                 accessToken);
+
+                auto nodeInfo = executePlanResponseMessage.getNodeInfo();
+                auto dmlResponseMessage = orchestrator::DMLResponseMessage(
+                        executePlanResponseMessage.getResultToken(),
+                        nodeInfo, time);
+
+                //std::cout << "DONE: " << socket << std::endl;
+                return std::make_pair(Status_Success, dmlResponseMessage.getBufferData());
+              }
+              catch (std::runtime_error &error) {
+                // error with query plan: not resultToken
+                std::cout << error.what() << std::endl;
+                ResponseErrorMessage errorMessage{std::string{error.what()}};
+                return std::make_pair(Status_Error, errorMessage.getBufferData());
+              }
+            }
+            catch (std::runtime_error &error) {
+              // error with query: not logical plan error
+              std::cout << error.what() << std::endl;
+              ResponseErrorMessage errorMessage{std::string{error.what()}};
+              return std::make_pair(Status_Error, errorMessage.getBufferData());
+            }
+        }));
     }
-  } catch (std::runtime_error &error) {
-    // error with query: not logical plan error
-    std::cout << error.what() << std::endl;
-    ResponseErrorMessage errorMessage{ std::string{error.what()} };
-    return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
-  return std::make_pair(Status_Success, resultBuffer);
+
+    for (auto& future : futures) {
+        std::cout << "WAIT" << std::endl;
+        future.wait();
+    }
+
+    return futures[0].get();
 }
 
 static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
@@ -259,6 +283,24 @@ main(int argc, const char *argv[]) {
 //    globalRalPort          = argv[5];
 
   std::cout << "Orchestrator is listening" << std::endl;
+
+    if (argc != 2) {
+        std::cout << argv[0] << " <number of RALs>" << std::endl;
+        exit(1);
+    }
+
+    ral_quantity = atoi(argv[1]);
+    for (int k = 1; k <= ral_quantity; ++k) {
+        if (k == 1) {
+            sockets.emplace_back("/tmp/ral.socket");
+            continue;
+        }
+        sockets.emplace_back("/tmp/ral." + std::to_string(k) + ".socket");
+    }
+
+    for (std::size_t k = 1; k <= sockets.size(); ++k) {
+        std::cout << "SOCKET " << k << ": " << sockets[k - 1] << std::endl;
+    }
 
   blazingdb::protocol::UnixSocketConnection connection("/tmp/orchestrator.socket");
   blazingdb::protocol::Server server(connection);

@@ -20,6 +20,10 @@ public:
       // TODO: remove global. @see main()
       : connection("/tmp/ral.socket"), client(connection) {}
 
+    InterpreterClient(const std::string& socket_path)
+    : connection(socket_path), client(connection)
+    { }
+
   ExecutePlanResponseMessage
   executeDirectPlan(std::string                            logicalPlan,
                     const blazingdb::protocol::TableGroup *tableGroup,
