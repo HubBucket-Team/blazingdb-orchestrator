@@ -18,7 +18,7 @@ class InterpreterClient {
 public:
   InterpreterClient()
       // TODO: remove global. @see main()
-      : connection("/tmp/ral.socket"), client(connection) {}
+      : connection("/tmp/ral.1.socket"), client(connection) {}
 
     InterpreterClient(const std::string& socket_path)
     : connection(socket_path), client(connection)
