@@ -23,13 +23,10 @@ std::string globalRalPort;
 
 #include <cstdlib>     /* srand, rand */
 #include <ctime>       /* time */
+#include "config/BlazingConfig.h"
 
 using namespace blazingdb::protocol;
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
-
-int ral_quantity = 0;
-std::vector<std::string> sockets;
-std::vector<std::future<result_pair>> futures;
 
 static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   try {
@@ -142,6 +139,8 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
     using blazingdb::protocol::orchestrator::DMLResponseMessage;
     using blazingdb::protocol::orchestrator::DMLDistributedResponseMessage;
 
+    auto& config = ral::config::BlazingConfig::getInstance();
+
     blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
     auto query = requestPayload.statement;
     std::cout << "##DML-FS: " << query << std::endl;
@@ -154,6 +153,7 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
     std::cout << "time:" << time << std::endl;
 
     // Create schemas for each RAL
+    int ral_quantity = config.getRalQuantity();
     std::vector<FileSystemTableGroupSchema> tableSchemas;
     for (int k = 0; k < ral_quantity; ++k) {
         FileSystemTableGroupSchema schema;
@@ -177,6 +177,8 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
         }
     }
 
+    const auto& sockets = config.getSocketPath();
+    std::vector<std::future<result_pair>> futures;
     for (std::size_t index = 0; index < sockets.size(); ++index) {
         futures.emplace_back(std::async([&, index]() {
             try {
@@ -338,18 +340,22 @@ main(int argc, const char *argv[]) {
 
   std::cout << "Orchestrator is listening" << std::endl;
 
-    if (argc != 2) {
-        std::cout << argv[0] << " <number of RALs>" << std::endl;
-        exit(1);
+    int ral_quantity = 1;
+    if (argc == 2) {
+        ral_quantity = atoi(argv[1]);
     }
 
-    ral_quantity = atoi(argv[1]);
+    auto& config = ral::config::BlazingConfig::getInstance();
+
+    config.setRalQuantity(ral_quantity);
+
     for (int k = 0; k < ral_quantity; ++k) {
-        sockets.emplace_back("/tmp/ral." + std::to_string(k + 1) + ".socket");
+        config.addSocketPath("/tmp/ral." + std::to_string(k + 1) + ".socket");
     }
 
-    for (std::size_t k = 0; k < sockets.size(); ++k) {
-        std::cout << "SOCKET " << (k + 1) << ": " << sockets[k] << std::endl;
+    const auto& socket_path = config.getSocketPath();
+    for (std::size_t k = 0; k < socket_path.size(); ++k) {
+        std::cout << "SOCKET " << (k + 1) << ": " << socket_path[k] << std::endl;
     }
 
   blazingdb::protocol::UnixSocketConnection connection("/tmp/orchestrator.socket");
