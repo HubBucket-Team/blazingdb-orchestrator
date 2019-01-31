@@ -116,60 +116,114 @@ static result_pair  closeConnectionService(uint64_t accessToken, Buffer&& buffer
   return std::make_pair(Status_Success, response.getBufferData());
 };
 
+
+using FileSystemTableGroupSchema = blazingdb::message::io::FileSystemTableGroupSchema;
+using FileSystemBlazingTableSchema = blazingdb::message::io::FileSystemBlazingTableSchema;
+
+
+void copyTableGroup(FileSystemTableGroupSchema& schema, FileSystemTableGroupSchema& base_schema) {
+    schema.name = base_schema.name;
+
+    for (const auto& table : base_schema.tables) {
+        FileSystemBlazingTableSchema new_table;
+
+        new_table.name = table.name;
+        new_table.schemaType = table.schemaType;
+        new_table.csv = table.csv;
+        new_table.parquet = table.parquet;
+        new_table.columnNames = table.columnNames;
+
+        schema.tables.emplace_back(new_table);
+    }
+}
+
+
 static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) {
-  blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
-  auto query = requestPayload.statement;
-  std::cout << "##DML-FS: " << query << std::endl;
+    using blazingdb::protocol::orchestrator::DMLResponseMessage;
+    using blazingdb::protocol::orchestrator::DMLDistributedResponseMessage;
 
-    for (auto& socket : sockets) {
-        futures.emplace_back(std::async([&]() {
+    blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
+    auto query = requestPayload.statement;
+    std::cout << "##DML-FS: " << query << std::endl;
+
+    calcite::CalciteClient calcite_client;
+    auto response = calcite_client.runQuery(query);
+    auto logicalPlan = response.getLogicalPlan();
+    auto time = response.getTime();
+    std::cout << "plan:" << logicalPlan << std::endl;
+    std::cout << "time:" << time << std::endl;
+
+    // Create schemas for each RAL
+    std::vector<FileSystemTableGroupSchema> tableSchemas;
+    for (int k = 0; k < ral_quantity; ++k) {
+        FileSystemTableGroupSchema schema;
+        copyTableGroup(schema, requestPayload.tableGroup);
+        tableSchemas.emplace_back(schema);
+    }
+
+    // Divide number of schema files by the RAL quantity
+    for (std::size_t k = 0; k < requestPayload.tableGroup.tables.size(); ++k) {
+        // RAL for each table group
+        int total = requestPayload.tableGroup.tables[k].files.size();
+        int quantity = total / ral_quantity;
+        if (quantity == 0) {
+            quantity = 1;
+        }
+
+        // Assign the files to each schema
+        auto it = requestPayload.tableGroup.tables[k].files.begin();
+        for (int i = 0, j = 0; i < total, j < ral_quantity; i += quantity, ++j) {
+            tableSchemas[j].tables[k].files.assign(it + i, it + i + quantity);
+        }
+    }
+
+    for (std::size_t index = 0; index < sockets.size(); ++index) {
+        futures.emplace_back(std::async([&, index]() {
             try {
-              //std::cout << "TASK: " << socket << std::endl;
-
-              calcite::CalciteClient calcite_client;
-              auto response = calcite_client.runQuery(query);
-              auto logicalPlan = response.getLogicalPlan();
-              auto time = response.getTime();
-              std::cout << "plan:" << logicalPlan << std::endl;
-              std::cout << "time:" << time << std::endl;
-              try {
-                interpreter::InterpreterClient ral_client(socket);
+                interpreter::InterpreterClient ral_client(sockets[index]);
 
                 auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan,
-                                                                                 requestPayload.tableGroup,
+                                                                                 tableSchemas[index],
                                                                                  accessToken);
-
                 auto nodeInfo = executePlanResponseMessage.getNodeInfo();
-                auto dmlResponseMessage = orchestrator::DMLResponseMessage(
-                        executePlanResponseMessage.getResultToken(),
-                        nodeInfo, time);
+                auto dmlResponseMessage = DMLResponseMessage(executePlanResponseMessage.getResultToken(),
+                                                             nodeInfo,
+                                                             time);
 
-                //std::cout << "DONE: " << socket << std::endl;
                 return std::make_pair(Status_Success, dmlResponseMessage.getBufferData());
-              }
-              catch (std::runtime_error &error) {
-                // error with query plan: not resultToken
+            }
+            catch (std::runtime_error &error) {
                 std::cout << error.what() << std::endl;
                 ResponseErrorMessage errorMessage{std::string{error.what()}};
                 return std::make_pair(Status_Error, errorMessage.getBufferData());
-              }
-            }
-            catch (std::runtime_error &error) {
-              // error with query: not logical plan error
-              std::cout << error.what() << std::endl;
-              ResponseErrorMessage errorMessage{std::string{error.what()}};
-              return std::make_pair(Status_Error, errorMessage.getBufferData());
             }
         }));
     }
 
+    bool isGood = true;
+    result_pair error_message{};
+    DMLDistributedResponseMessage distributed_response{};
+
     for (auto& future : futures) {
-        std::cout << "WAIT" << std::endl;
         future.wait();
+
+        auto response = future.get();
+        if (response.first != Status::Status_Success) {
+            isGood = false;
+            error_message = response;
+        }
+        if (isGood) {
+            distributed_response.size++;
+            distributed_response.responses.emplace_back(DMLResponseMessage(response.second->data()));
+        }
     }
 
-    return futures[0].get();
+    if (isGood == false) {
+        return error_message;
+    }
+    return std::make_pair(Status_Success, distributed_response.getBufferData());
 }
+
 
 static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
   orchestrator::DMLRequestMessage requestPayload(buffer.data());
@@ -290,16 +344,12 @@ main(int argc, const char *argv[]) {
     }
 
     ral_quantity = atoi(argv[1]);
-    for (int k = 1; k <= ral_quantity; ++k) {
-        if (k == 1) {
-            sockets.emplace_back("/tmp/ral.socket");
-            continue;
-        }
-        sockets.emplace_back("/tmp/ral." + std::to_string(k) + ".socket");
+    for (int k = 0; k < ral_quantity; ++k) {
+        sockets.emplace_back("/tmp/ral." + std::to_string(k + 1) + ".socket");
     }
 
-    for (std::size_t k = 1; k <= sockets.size(); ++k) {
-        std::cout << "SOCKET " << k << ": " << sockets[k - 1] << std::endl;
+    for (std::size_t k = 0; k < sockets.size(); ++k) {
+        std::cout << "SOCKET " << (k + 1) << ": " << sockets[k] << std::endl;
     }
 
   blazingdb::protocol::UnixSocketConnection connection("/tmp/orchestrator.socket");
