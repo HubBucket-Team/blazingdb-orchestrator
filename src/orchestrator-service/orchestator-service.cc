@@ -139,7 +139,7 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
     using blazingdb::protocol::orchestrator::DMLResponseMessage;
     using blazingdb::protocol::orchestrator::DMLDistributedResponseMessage;
 
-    auto& config = ral::config::BlazingConfig::getInstance();
+    auto& config = orch::config::BlazingConfig::getInstance();
 
     blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
     auto query = requestPayload.statement;
@@ -345,7 +345,7 @@ main(int argc, const char *argv[]) {
         ral_quantity = atoi(argv[1]);
     }
 
-    auto& config = ral::config::BlazingConfig::getInstance();
+    auto& config = orch::config::BlazingConfig::getInstance();
 
     config.setRalQuantity(ral_quantity);
 

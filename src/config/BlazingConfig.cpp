@@ -1,6 +1,6 @@
 #include "config/BlazingConfig.h"
 
-namespace ral {
+namespace orch {
 namespace config {
 
     BlazingConfig::BlazingConfig()

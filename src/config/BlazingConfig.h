@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 
-namespace ral {
+namespace orch {
 namespace config {
 
     class BlazingConfig {
