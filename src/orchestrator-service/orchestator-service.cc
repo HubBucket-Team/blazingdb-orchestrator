@@ -97,8 +97,8 @@ static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buff
 
 
 static result_pair  closeConnectionService(uint64_t accessToken, Buffer&& buffer)  {
-  interpreter::InterpreterClient ral_client;
   try {
+    interpreter::InterpreterClient ral_client;
     auto status = ral_client.closeConnection(accessToken);
     std::cout << "status:" << status << std::endl;
   } catch (std::runtime_error &error) {
@@ -172,8 +172,9 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
       resultBuffer = dmlResponseMessage.getBufferData();
     } catch (std::runtime_error &error) {
       // error with query plan: not resultToken
-      std::cout << error.what() << std::endl;
-      ResponseErrorMessage errorMessage{ std::string{error.what()} };
+      std::cout << "In function dmlService: " << error.what() << std::endl;
+      std::string stringErrorMessage = "Orchestrator can't communicate with RAL: " + std::string(error.what());
+      ResponseErrorMessage errorMessage{ stringErrorMessage };
       return std::make_pair(Status_Error, errorMessage.getBufferData());
     }
   } catch (std::runtime_error &error) {
@@ -222,8 +223,9 @@ static result_pair ddlDropTableService(uint64_t accessToken, Buffer&& buffer)  {
     auto status = calcite_client.dropTable(  payload );
   } catch (std::runtime_error &error) {
     // error with ddl query
-    std::cout << error.what() << std::endl;
-    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    std::cout << "In function ddlDropTableService: " << error.what() << std::endl;
+    std::string stringErrorMessage = "Orchestrator can't communicate with Calcite: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   ZeroMessage response{};
