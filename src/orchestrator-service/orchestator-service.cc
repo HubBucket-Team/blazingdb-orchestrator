@@ -134,14 +134,16 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
       resultBuffer = dmlResponseMessage.getBufferData();
     } catch (std::runtime_error &error) {
       // error with query plan: not resultToken
-      std::cout << error.what() << std::endl;
-      ResponseErrorMessage errorMessage{ std::string{error.what()} };
+      std::cout << "In function dmlFileSystemService: " << error.what() << std::endl;
+      std::string stringErrorMessage = "Error on the communication between Orchestrator and RAL: " + std::string(error.what());
+      ResponseErrorMessage errorMessage{ stringErrorMessage };
       return std::make_pair(Status_Error, errorMessage.getBufferData());
     }
   } catch (std::runtime_error &error) {
     // error with query: not logical plan error
-    std::cout << error.what() << std::endl;
-    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    std::cout << "In function dmlFileSystemService: " << error.what() << std::endl;
+    std::string stringErrorMessage = "Error on the communication between Orchestrator and Calcite: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   return std::make_pair(Status_Success, resultBuffer);
@@ -173,15 +175,15 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
     } catch (std::runtime_error &error) {
       // error with query plan: not resultToken
       std::cout << "In function dmlService: " << error.what() << std::endl;
-      std::string stringErrorMessage = "Orchestrator can't communicate with RAL: " + std::string(error.what());
+      std::string stringErrorMessage = "Error on the communication between Orchestrator and RAL: " + std::string(error.what());
       ResponseErrorMessage errorMessage{ stringErrorMessage };
       return std::make_pair(Status_Error, errorMessage.getBufferData());
     }
   } catch (std::runtime_error &error) {
     // error with query: not logical plan error
     std::cout << "In function dmlService: " << error.what() << std::endl;
-    std::string stringErrorMessage = "Orchestrator can't communicate with Calcite: " + std::string(error.what());
-      ResponseErrorMessage errorMessage{ stringErrorMessage };
+    std::string stringErrorMessage = "Error on the communication between Orchestrator and Calcite: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   return std::make_pair(Status_Success, resultBuffer);
