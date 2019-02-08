@@ -215,7 +215,6 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
             error_message = response;
         }
         if (isGood) {
-            distributed_response.size++;
             distributed_response.responses.emplace_back(DMLResponseMessage(response.second->data()));
         }
     }
