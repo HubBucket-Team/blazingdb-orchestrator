@@ -22,51 +22,63 @@ public:
   }
 
   DMLResponseMessage runQuery(std::string query) {
-    int64_t sessionToken = 0;
+    try {
+      int64_t sessionToken = 0;
 
-    DMLRequestMessage message{query};
-    auto    bufferedData = MakeRequest(
-        calcite::MessageType_DML, sessionToken, message);
-    Buffer responseBuffer = client.send(bufferedData);
-    auto   response       = MakeResponse<DMLResponseMessage>(responseBuffer);
-    return response;
+      DMLRequestMessage message{query};
+      auto    bufferedData = MakeRequest(
+          calcite::MessageType_DML, sessionToken, message);
+      Buffer responseBuffer = client.send(bufferedData);
+      auto   response       = MakeResponse<DMLResponseMessage>(responseBuffer);
+      return response;
+    } catch(std::runtime_error& error) {
+        throw std::runtime_error(std::string{error.what()});
+    }
   }
 
   Status createTable(orchestrator::DDLCreateTableRequestMessage& message){
-    int64_t sessionToken = 0;
-    auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_CREATE_TABLE,
-                                     sessionToken,
-                                     message);
+    try {
+      int64_t sessionToken = 0;
+      auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_CREATE_TABLE,
+                                      sessionToken,
+                                      message);
 
-    Buffer responseBuffer = client.send(bufferedData);
-    if (responseBuffer.size() == 0) {
-      throw std::runtime_error("Orchestrattor::CreateTable failed! responseBuffer from calcite is zero");
-    }
+      Buffer responseBuffer = client.send(bufferedData);
+      if (responseBuffer.size() == 0) {
+        throw std::runtime_error("Orchestrattor::CreateTable failed! responseBuffer from calcite is zero");
+      }
 
-    ResponseMessage response{responseBuffer.data()};
-    if (response.getStatus() == Status_Error) {
-      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-      throw std::runtime_error(errorMessage.getMessage());
+      ResponseMessage response{responseBuffer.data()};
+      if (response.getStatus() == Status_Error) {
+        ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
+        throw std::runtime_error(errorMessage.getMessage());
+      }
+      return response.getStatus();
+    } catch(std::runtime_error& error) {
+        throw std::runtime_error(std::string{error.what()});
     }
-    return response.getStatus();
   }
 
   Status dropTable(orchestrator::DDLDropTableRequestMessage& payload){
-    int64_t sessionToken = 0;
-    auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_DROP_TABLE,
-                                    sessionToken,
-                                    payload);
+    try {
+      int64_t sessionToken = 0;
+      auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_DROP_TABLE,
+                                      sessionToken,
+                                      payload);
 
-    Buffer responseBuffer = client.send(bufferedData);
-    if (responseBuffer.size() == 0) {
-      throw std::runtime_error("Orchestrattor::DropTable failed! responseBuffer from calcite is zero");
+      Buffer responseBuffer = client.send(bufferedData);
+      if (responseBuffer.size() == 0) {
+        throw std::runtime_error("Orchestrattor::DropTable failed! responseBuffer from calcite is zero");
+      }
+      ResponseMessage response{responseBuffer.data()};
+      if (response.getStatus() == Status_Error) {
+        ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
+        throw std::runtime_error(errorMessage.getMessage());
+      }
+      return response.getStatus();
+    } catch(std::runtime_error& error) {
+        throw std::runtime_error(std::string{error.what()});
     }
-    ResponseMessage response{responseBuffer.data()};
-    if (response.getStatus() == Status_Error) {
-      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-      throw std::runtime_error(errorMessage.getMessage());
-    }
-    return response.getStatus();
   }
 
 

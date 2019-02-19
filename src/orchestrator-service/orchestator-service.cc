@@ -24,22 +24,23 @@ std::string globalRalPort;
 using namespace blazingdb::protocol;
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 
-static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
+static result_pair registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   try {
     interpreter::InterpreterClient ral_client;
     auto response = ral_client.registerFileSystem(accessToken, buffer);
 
   } catch (std::runtime_error &error) {
     // error with query plan: not resultToken
-    std::cout << error.what() << std::endl;
-    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    std::cout << "In function registerFileSystem: " << error.what() << std::endl;
+    std::string stringErrorMessage = "Cannot register the filesystem: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
-static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  {
+static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   try {
     interpreter::InterpreterClient ral_client;
     blazingdb::message::io::FileSystemDeregisterRequestMessage message(buffer.data());
@@ -47,8 +48,9 @@ static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer) 
 
   } catch (std::runtime_error &error) {
     // error with query plan: not resultToken
-    std::cout << error.what() << std::endl;
-    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    std::cout << "In function deregisterFileSystem: " << error.what() << std::endl;
+    std::string stringErrorMessage = "Cannot deregister the filesystem: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   ZeroMessage response{};
@@ -63,8 +65,9 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
 
   } catch (std::runtime_error &error) {
     // error with query plan: not resultToken
-    std::cout << error.what() << std::endl;
-    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    std::cout << "In function loadCsvSchema: " << error.what() << std::endl;
+    std::string stringErrorMessage = "Cannot load the csv schema: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   return std::make_pair(Status_Success, resultBuffer);
@@ -79,8 +82,9 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
 
   } catch (std::runtime_error &error) {
     // error with query plan: not resultToken
-    std::cout << error.what() << std::endl;
-    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    std::cout << "In function loadParquetSchema: " << error.what() << std::endl;
+    std::string stringErrorMessage = "Cannot load the parquet schema: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   return std::make_pair(Status_Success, resultBuffer);
@@ -96,20 +100,22 @@ static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buff
 };
 
 
-static result_pair  closeConnectionService(uint64_t accessToken, Buffer&& buffer)  {
-  interpreter::InterpreterClient ral_client;
+static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)  {
   try {
+    interpreter::InterpreterClient ral_client;
     auto status = ral_client.closeConnection(accessToken);
     std::cout << "status:" << status << std::endl;
   } catch (std::runtime_error &error) {
-    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    std::cout << "In function closeConnectionService: " << error.what() << std::endl;
+    std::string stringErrorMessage = "Cannot close the connection: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 };
 
-static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) {
+static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) {
   blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
   auto query = requestPayload.statement;
   std::cout << "##DML-FS: " << query << std::endl;
@@ -134,20 +140,22 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
       resultBuffer = dmlResponseMessage.getBufferData();
     } catch (std::runtime_error &error) {
       // error with query plan: not resultToken
-      std::cout << error.what() << std::endl;
-      ResponseErrorMessage errorMessage{ std::string{error.what()} };
+      std::cout << "In function dmlFileSystemService: " << error.what() << std::endl;
+      std::string stringErrorMessage = "Error on the communication between Orchestrator and RAL: " + std::string(error.what());
+      ResponseErrorMessage errorMessage{ stringErrorMessage };
       return std::make_pair(Status_Error, errorMessage.getBufferData());
     }
   } catch (std::runtime_error &error) {
     // error with query: not logical plan error
-    std::cout << error.what() << std::endl;
-    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    std::cout << "In function dmlFileSystemService: " << error.what() << std::endl;
+    std::string stringErrorMessage = "Error on the communication between Orchestrator and Calcite: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   return std::make_pair(Status_Success, resultBuffer);
 }
 
-static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
+static result_pair dmlService(uint64_t accessToken, Buffer&& buffer)  {
   orchestrator::DMLRequestMessage requestPayload(buffer.data());
   auto query = requestPayload.getQuery();
   std::cout << "DML: " << query << std::endl;
@@ -172,14 +180,16 @@ static result_pair  dmlService(uint64_t accessToken, Buffer&& buffer)  {
       resultBuffer = dmlResponseMessage.getBufferData();
     } catch (std::runtime_error &error) {
       // error with query plan: not resultToken
-      std::cout << error.what() << std::endl;
-      ResponseErrorMessage errorMessage{ std::string{error.what()} };
+      std::cout << "In function dmlService: " << error.what() << std::endl;
+      std::string stringErrorMessage = "Error on the communication between Orchestrator and RAL: " + std::string(error.what());
+      ResponseErrorMessage errorMessage{ stringErrorMessage };
       return std::make_pair(Status_Error, errorMessage.getBufferData());
     }
   } catch (std::runtime_error &error) {
     // error with query: not logical plan error
-    std::cout << error.what() << std::endl;
-    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    std::cout << "In function dmlService: " << error.what() << std::endl;
+    std::string stringErrorMessage = "Error on the communication between Orchestrator and Calcite: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   return std::make_pair(Status_Success, resultBuffer);
@@ -200,9 +210,10 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
     auto status = calcite_client.createTable(  payload );
   } catch (std::runtime_error &error) {
      // error with ddl query
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
-     return std::make_pair(Status_Error, errorMessage.getBufferData());
+    std::cout << "In function ddlCreateTableService: " << error.what() << std::endl;
+    std::string stringErrorMessage = "In function ddlCreateTableService: cannot create the table: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
@@ -222,8 +233,9 @@ static result_pair ddlDropTableService(uint64_t accessToken, Buffer&& buffer)  {
     auto status = calcite_client.dropTable(  payload );
   } catch (std::runtime_error &error) {
     // error with ddl query
-    std::cout << error.what() << std::endl;
-    ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    std::cout << "In function ddlDropTableService: " << error.what() << std::endl;
+    std::string stringErrorMessage = "Orchestrator can't communicate with Calcite: " + std::string(error.what());
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   ZeroMessage response{};
