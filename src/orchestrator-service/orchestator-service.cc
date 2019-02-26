@@ -6,6 +6,8 @@
 #include <string>
 #include <future>
 
+#include "blazingdb-communication.hpp"
+
 // TODO: remove global
 std::string globalOrchestratorPort;
 std::string globalCalciteIphost;
@@ -383,6 +385,8 @@ main(int argc, const char *argv[]) {
 //    globalRalIphost        = argv[4];
 //    globalRalPort          = argv[5];
 
+  Communication::InitializeManager();
+
   std::cout << "Orchestrator is listening" << std::endl;
 
     int ral_quantity = 1;
@@ -422,5 +426,8 @@ main(int argc, const char *argv[]) {
   services.insert(std::make_pair(orchestrator::MessageType_LoadParquetSchema, &loadParquetSchema));
 
   server.handle(&orchestratorService);
+
+  Communication::FinalizeManager();
+
   return 0;
 }

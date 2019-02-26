@@ -62,7 +62,9 @@ if(NOT BLAZINGDB_COMMUNICATION_FOUND)
 endif()
 
 message(STATUS "blazingdb-communication found in ${BLAZINGDB_COMMUNICATION_ROOT}")
-include_directories(${BLAZINGDB_COMMUNICATION_INCLUDEDIR})
+include_directories(${BLAZINGDB_COMMUNICATION_INCLUDEDIR}
+  ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-communication-build/CMakeFiles/thirdparty/rapidjson-install/include
+)
 
 link_directories(${BLAZINGDB_COMMUNICATION_LIBDIR})
 
