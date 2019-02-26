@@ -29,8 +29,10 @@ include(CTest)
 
 # NOTE Do not change the inclusion order
 # Configure dependencies
+include(ConfigureBoost)
 include(ConfigureFlatBuffers)
 include(ConfigureBlazingDBProtocol)
+include(ConfigureBlazingDBCommunication)
 
 find_package(Threads)
 
@@ -44,4 +46,4 @@ set(orchestrator_source_files
     src/orchestrator-service/orchestator-service.cc)
 
 add_executable(blazingdb_orchestator_service ${orchestrator_source_files})
-target_link_libraries(blazingdb_orchestator_service Threads::Threads   ${ZEROMQ_STATIC_LIB} ${FLATBUFFERS_STATIC_LIB}  ${BLAZINGDB_PROTOCOL_STATIC_LIB})
+target_link_libraries(blazingdb_orchestator_service Threads::Threads   ${ZEROMQ_STATIC_LIB} ${FLATBUFFERS_STATIC_LIB}  ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${BLAZINGDB_COMMUNICATION_STATIC_LIB} Boost::system)
