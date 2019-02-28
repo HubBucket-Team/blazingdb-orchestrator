@@ -33,12 +33,14 @@ include(ConfigureBoost)
 include(ConfigureFlatBuffers)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBCommunication)
+include(ConfigureRapidJSON)
 
 find_package(Threads)
 
 # BEGIN MAIN #
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
+    ${RAPIDJSON_INCLUDE_DIRS}
 )
 
 set(orchestrator_source_files
