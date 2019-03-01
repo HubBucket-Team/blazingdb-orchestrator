@@ -53,18 +53,18 @@ public:
 
     blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup};
 
-    std::vector<std::string> sourceDataFiles;
+    int clusterSize;
     for (blazingdb::message::io::FileSystemBlazingTableSchema table :
          tableGroup.tables) {
       for (std::string file : table.files) {
-        sourceDataFiles.push_back(file);
+        clusterSize++;
       }
     }
 
     const std::unique_ptr<blazingdb::communication::Manager> &manager =
         Communication::Manager();
     blazingdb::communication::Context *context =
-        manager->generateContext(logicalPlan, sourceDataFiles);
+        manager->generateContext(logicalPlan, clusterSize);
 
     auto bufferedData =
         MakeRequest(interpreter::MessageType_ExecutePlanFileSystem,
