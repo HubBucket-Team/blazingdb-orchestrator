@@ -10,8 +10,6 @@
 #include <blazingdb/protocol/message/interpreter/messages.h>
 #include <blazingdb/protocol/message/io/file_system.h>
 
-#include "blazingdb-communication.hpp"
-
 namespace blazingdb {
 namespace protocol {
 namespace interpreter {
@@ -49,6 +47,7 @@ public:
 
   ExecutePlanResponseMessage executeFSDirectPlan(std::string logicalPlan,
                     blazingdb::message::io::FileSystemTableGroupSchema& tableGroup,
+                    blazingdb::message::io::CommunicationContext& context,
                     int64_t                                access_token) {
 
     blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup};
@@ -60,11 +59,6 @@ public:
         sourceDataFiles.push_back(file);
       }
     }
-
-    const std::unique_ptr<blazingdb::communication::Manager> &manager =
-        Communication::Manager();
-    blazingdb::communication::Context *context =
-        manager->generateContext(logicalPlan, sourceDataFiles);
 
     auto bufferedData =
         MakeRequest(interpreter::MessageType_ExecutePlanFileSystem,
