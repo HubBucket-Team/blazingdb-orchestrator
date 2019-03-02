@@ -52,14 +52,6 @@ public:
 
     blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup};
 
-    std::vector<std::string> sourceDataFiles;
-    for (blazingdb::message::io::FileSystemBlazingTableSchema table :
-         tableGroup.tables) {
-      for (std::string file : table.files) {
-        sourceDataFiles.push_back(file);
-      }
-    }
-
     auto bufferedData =
         MakeRequest(interpreter::MessageType_ExecutePlanFileSystem,
                     access_token,
