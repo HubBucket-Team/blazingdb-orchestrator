@@ -161,15 +161,15 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
   std::vector<FileSystemTableGroupSchema> tableSchemas;
 
 
-  std::vector<blazingdb::protocol::io::CommunicationNode> fbNodes;
+  std::vector<blazingdb::message::io::CommunicationNode> fbNodes;
   std::transform(cluster.cbegin(), cluster.cend(),
                   std::back_inserter(fbNodes),
-                  [](const std::shared_ptr<Node>& node) -> blazingdb::protocol::io::CommunicationNode {
+                  [](const std::shared_ptr<Node>& node) -> blazingdb::message::io::CommunicationNode {
                     auto buffer = node->ToBuffer();
                     std::vector<std::int8_t> vecbuffer{buffer->data(), buffer->data() + buffer->size()};
-                    return blazingdb::protocol::io::CommunicationNode(vecbuffer);
+                    return blazingdb::message::io::CommunicationNode(vecbuffer);
                   });
-  blazingdb::protocol::io::CommunicationContext fbContext{fbNodes, 0, context->getContextToken().getIntToken()};
+  blazingdb::message::io::CommunicationContext fbContext{fbNodes, 0, context->getContextToken().getIntToken()};
 
 
   try {
