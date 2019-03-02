@@ -208,7 +208,7 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
     for (std::size_t index = 0; index < cluster.size(); ++index) {
         futures.emplace_back(std::async([&, index]() {
             try {
-                interpreter::InterpreterClient ral_client(cluster[index]->socketPath());
+                interpreter::InterpreterClient ral_client("/tmp/ral." + std::to_string(cluster[index]->unixSocketId()) + ".socket");
 
                 auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan,
                                                                                  tableSchemas[index],

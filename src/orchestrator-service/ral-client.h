@@ -50,7 +50,7 @@ public:
                     blazingdb::message::io::CommunicationContext& context,
                     int64_t                                access_token) {
 
-    blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup};
+    blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup, context};
 
     auto bufferedData =
         MakeRequest(interpreter::MessageType_ExecutePlanFileSystem,
