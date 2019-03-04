@@ -128,7 +128,7 @@ using FileSystemTableGroupSchema = blazingdb::message::io::FileSystemTableGroupS
 using FileSystemBlazingTableSchema = blazingdb::message::io::FileSystemBlazingTableSchema;
 
 
-void copyTableGroup(FileSystemTableGroupSchema& schema, FileSystemTableGroupSchema& base_schema) {
+void copyTableGroup(FileSystemTableGroupSchema& schema, const FileSystemTableGroupSchema& base_schema) {
     schema.name = base_schema.name;
 
     for (const auto& table : base_schema.tables) {
@@ -151,7 +151,7 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
   using namespace blazingdb::communication;
 
   blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
-  auto query = requestPayload.statement;
+  auto query = requestPayload.statement();
   std::cout << "##DML-FS: " << query << std::endl;
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
 
@@ -184,19 +184,19 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
     // Create schemas for each RAL
     for (int k = 0; k < cluster.size(); ++k) {
       FileSystemTableGroupSchema schema;
-      copyTableGroup(schema, requestPayload.tableGroup);
+      copyTableGroup(schema, requestPayload.tableGroup());
       tableSchemas.emplace_back(schema);
     }
 
     // Divide number of schema files by the RAL quantity
-    for (std::size_t k = 0; k < requestPayload.tableGroup.tables.size(); ++k) {
+    for (std::size_t k = 0; k < requestPayload.tableGroup().tables.size(); ++k) {
         // RAL for each table group
-        int total = requestPayload.tableGroup.tables[k].files.size();
+        int total = requestPayload.tableGroup().tables[k].files.size();
         int quantity = std::max(total / (int)cluster.size(), 1);
 
         // Assign the files to each schema
-        auto itBegin = requestPayload.tableGroup.tables[k].files.begin();
-        auto itEnd = requestPayload.tableGroup.tables[k].files.end();
+        auto itBegin = requestPayload.tableGroup().tables[k].files.begin();
+        auto itEnd = requestPayload.tableGroup().tables[k].files.end();
         for (int j = 0; j < cluster.size() && itBegin != itEnd; ++j) {
             std::ptrdiff_t offset = std::min((std::ptrdiff_t)quantity, std::distance(itBegin, itEnd));
             tableSchemas[j].tables[k].files.assign(itBegin, itBegin + offset);
