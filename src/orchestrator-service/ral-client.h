@@ -47,7 +47,7 @@ public:
 
   ExecutePlanResponseMessage executeFSDirectPlan(std::string logicalPlan,
                     blazingdb::message::io::FileSystemTableGroupSchema& tableGroup,
-                    blazingdb::message::io::CommunicationContext& context,
+                    blazingdb::message::io::CommunicationContextSchema& context,
                     int64_t                                access_token) {
 
     blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup, context};

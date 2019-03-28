@@ -161,15 +161,15 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
   std::vector<FileSystemTableGroupSchema> tableSchemas;
 
 
-  std::vector<blazingdb::message::io::CommunicationNode> fbNodes;
+  std::vector<blazingdb::message::io::CommunicationNodeSchema> fbNodes;
   std::transform(cluster.cbegin(), cluster.cend(),
                   std::back_inserter(fbNodes),
-                  [](const std::shared_ptr<Node>& node) -> blazingdb::message::io::CommunicationNode {
+                  [](const std::shared_ptr<Node>& node) -> blazingdb::message::io::CommunicationNodeSchema {
                     auto buffer = node->ToBuffer();
                     std::vector<std::int8_t> vecbuffer{buffer->data(), buffer->data() + buffer->size()};
-                    return blazingdb::message::io::CommunicationNode(vecbuffer);
+                    return blazingdb::message::io::CommunicationNodeSchema{vecbuffer};
                   });
-  blazingdb::message::io::CommunicationContext fbContext{fbNodes, 0, context->getContextToken().getIntToken()};
+  blazingdb::message::io::CommunicationContextSchema fbContext{fbNodes, 0, context->getContextToken().getIntToken()};
 
 
   try {
@@ -206,7 +206,7 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
 
     std::vector<std::future<result_pair>> futures;
     for (std::size_t index = 0; index < cluster.size(); ++index) {
-        futures.emplace_back(std::async([&, index]() {
+        futures.emplace_back(std::async(std::launch::async, [&, index]() {
             try {
                 interpreter::InterpreterClient ral_client("/tmp/ral." + std::to_string(cluster[index]->unixSocketId()) + ".socket");
 
@@ -236,8 +236,6 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
     DMLDistributedResponseMessage distributed_response{};
 
     for (auto& future : futures) {
-        future.wait();
-
         auto response = future.get();
         if (response.first != Status::Status_Success) {
             isGood = false;
