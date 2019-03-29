@@ -180,7 +180,6 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
     std::cout << "plan:" << logicalPlan << std::endl;
     std::cout << "time:" << time << std::endl;
 
-    interpreter::InterpreterClient ral_client;
     // Create schemas for each RAL
     for (int k = 0; k < cluster.size(); ++k) {
       FileSystemTableGroupSchema schema;
