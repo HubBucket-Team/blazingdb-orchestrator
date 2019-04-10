@@ -13,10 +13,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
-# TODO percy felipe alexander remove these lines when cudf stop using old C++ ABI
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
-#message(AUTHOR_WARNING "Using old C++ ABI: -D_GLIBCXX_USE_CXX11_ABI=0")
+if(CMAKE_COMPILER_IS_GNUCXX)
+    option(CMAKE_CXX11_ABI "Enable the GLIBCXX11 ABI" ON)
+    if(CMAKE_CXX11_ABI)
+        message(STATUS "Enabling the GLIBCXX11 ABI")
+    else()
+        message(STATUS "Disabling the GLIBCXX11 ABI")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
+    endif(CMAKE_CXX11_ABI)
+endif(CMAKE_COMPILER_IS_GNUCXX)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
 message(STATUS "CMAKE_MODULE_PATH:" "${CMAKE_MODULE_PATH}")
