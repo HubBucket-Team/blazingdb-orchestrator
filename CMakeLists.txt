@@ -8,30 +8,21 @@ cmake_minimum_required(VERSION 3.11)
 
 project(blazingdb-orchestrator)
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
+message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 
-message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
-
-if(CMAKE_COMPILER_IS_GNUCXX)
-    option(CMAKE_CXX11_ABI "Enable the GLIBCXX11 ABI" ON)
-    if(CMAKE_CXX11_ABI)
-        message(STATUS "Enabling the GLIBCXX11 ABI")
-    else()
-        message(STATUS "Disabling the GLIBCXX11 ABI")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
-    endif(CMAKE_CXX11_ABI)
-endif(CMAKE_COMPILER_IS_GNUCXX)
-
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
-message(STATUS "CMAKE_MODULE_PATH:" "${CMAKE_MODULE_PATH}")
+# NOTE Import cmake modules from blazingdb-dependencies (Mandatory: First step!)
+include(ImportCMakeModules)
+include(ConfigureBlazingDBHostCompiler)
 
 # Include CMake modules
 include(FeatureSummary)
 include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(CTest)
+
+# NOTE Configure dependencies (always include this one first)
+include(ConfigureBlazingDBDependencies)
 
 # NOTE Do not change the inclusion order
 # Configure dependencies
