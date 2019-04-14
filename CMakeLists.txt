@@ -38,3 +38,6 @@ include_directories(
 
 add_executable(blazingdb_orchestator_service src/orchestrator-service/orchestator-service.cc)
 target_link_libraries(blazingdb_orchestator_service Threads::Threads   ${ZEROMQ_STATIC_LIB} ${FLATBUFFERS_STATIC_LIB}  ${BLAZINGDB_PROTOCOL_STATIC_LIB})
+
+# Print the project summary
+feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
