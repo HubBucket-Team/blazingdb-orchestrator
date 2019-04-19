@@ -18,7 +18,11 @@ class InterpreterClient {
 public:
   InterpreterClient()
       // TODO: remove global. @see main()
-      : connection("/tmp/ral.socket"), client(connection) {}
+      : connection("/tmp/ral.1.socket"), client(connection) {}
+
+    InterpreterClient(const std::string& socket_path)
+    : connection(socket_path), client(connection)
+    { }
 
   ExecutePlanResponseMessage
   executeDirectPlan(std::string                            logicalPlan,
@@ -43,9 +47,10 @@ public:
 
   ExecutePlanResponseMessage executeFSDirectPlan(std::string logicalPlan,
                     blazingdb::message::io::FileSystemTableGroupSchema& tableGroup,
+                    blazingdb::message::io::CommunicationContextSchema& context,
                     int64_t                                access_token) {
 
-    blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup};
+    blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup, context};
 
     auto bufferedData =
         MakeRequest(interpreter::MessageType_ExecutePlanFileSystem,
