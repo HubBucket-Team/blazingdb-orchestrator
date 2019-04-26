@@ -16,12 +16,9 @@ namespace interpreter {
 
 class InterpreterClient {
 public:
-  InterpreterClient()
-      // TODO: remove global. @see main()
-      : connection("/tmp/ral.1.socket"), client(connection) {}
 
-    InterpreterClient(const std::string& socket_path)
-    : connection(socket_path), client(connection)
+    InterpreterClient(const ConnectionAddress &ralConnectionAddress)
+    : connection(ralConnectionAddress), client(connection)
     { }
 
   ExecutePlanResponseMessage
@@ -183,7 +180,13 @@ public:
   }
 
 protected:
+
+#ifdef USE_UNIX_SOCKETS
   blazingdb::protocol::UnixSocketConnection connection;
+#else
+  blazingdb::protocol::TCPConnection connection;
+#endif
+
   blazingdb::protocol::Client client;
 };
 

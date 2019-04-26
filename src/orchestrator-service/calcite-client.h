@@ -16,9 +16,8 @@ namespace calcite {
 
 class CalciteClient {
 public:
-  CalciteClient()
-      // TODO: remove global. @see main()
-      : connection("/tmp/calcite.socket"), client(connection) {
+  CalciteClient(const ConnectionAddress &calciteConnectionAddress)
+      : connection(calciteConnectionAddress), client(connection) {
   }
 
   DMLResponseMessage runQuery(std::string query) {
@@ -83,7 +82,7 @@ public:
 
 
 private:
-  blazingdb::protocol::UnixSocketConnection connection;
+  blazingdb::protocol::TCPConnection connection;
   blazingdb::protocol::Client client;
 };
 
