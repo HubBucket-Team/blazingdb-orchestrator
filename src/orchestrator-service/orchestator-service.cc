@@ -431,36 +431,64 @@ main(int argc, const char *argv[]) {
 
 #else
 
-  int orchestratorPort = -1;
-  std::string calciteHost;
-  int calcitePort = -1;
+  std::cout << "usage: " << argv[0] << " <ORCHESTRATOR_TCP_PORT> <CALCITE_TCP_[IP|HOSTNAME]> <CALCITE_TCP_PORT> " << std::endl;
 
-  if (4 != argc) {
-    std::cout << "usage: " << argv[0]
-              << " <ORCHESTRATOR_TCP_PORT> <CALCITE_TCP_[IP|HOSTNAME]> <CALCITE_TCP_PORT> "
-              << std::endl;
+  switch (argc) {
+    case 1: {
+        setupTCPConnections();
+    }
+    break;
     
-    std::cout << "Using default TCP connection settings: " << std::endl;
-    setupTCPConnections();
-  } else {
-  
-    orchestratorPort = ConnectionUtils::parsePort(argv[1]);
+    case 2: {
+        const int orchestratorPort = ConnectionUtils::parsePort(argv[1]);
+        
+        if (orchestratorPort == -1) {
+            std::cout << "FATAL: Invalid Orchestrator TCP port " + std::string(argv[1]) << std::endl;
+            return EXIT_FAILURE;
+        }
+
+        setupTCPConnections(orchestratorPort);
+    }
+    break;
     
-    if (orchestratorPort == -1) {
-        std::cout << "FATAL: Invalid Orchestrator TCP port " + std::string(argv[1]) << std::endl;
+    case 3: {
+        const int orchestratorPort = ConnectionUtils::parsePort(argv[1]);
+        
+        if (orchestratorPort == -1) {
+            std::cout << "FATAL: Invalid Orchestrator TCP port " + std::string(argv[1]) << std::endl;
+            return EXIT_FAILURE;
+        }
+
+        const std::string calciteHost = argv[2];
+
+        setupTCPConnections(orchestratorPort, calciteHost);
+    }
+    break;
+    
+    case 4: {
+        const int orchestratorPort = ConnectionUtils::parsePort(argv[1]);
+        
+        if (orchestratorPort == -1) {
+            std::cout << "FATAL: Invalid Orchestrator TCP port " + std::string(argv[1]) << std::endl;
+            return EXIT_FAILURE;
+        }
+
+        const std::string calciteHost = argv[2];
+        const int calcitePort = ConnectionUtils::parsePort(argv[3]);
+        
+        if (calcitePort == -1) {
+            std::cout << "FATAL: Invalid Calcite TCP port " + std::string(argv[3]) << std::endl;
+            return EXIT_FAILURE;
+        }
+        
+        setupTCPConnections(orchestratorPort, calciteHost, calcitePort);
+    }
+    break;
+    
+    default: {
+        std::cout << "FATAL: Invalid number of arguments" << std::endl;
         return EXIT_FAILURE;
     }
-    
-    std::string calciteHost = argv[2];
-    
-    calcitePort = ConnectionUtils::parsePort(argv[3]);
-    
-    if (calcitePort == -1) {
-        std::cout << "FATAL: Invalid Calcite TCP port " + std::string(argv[3]) << std::endl;
-        return EXIT_FAILURE;
-    }
-    
-    setupTCPConnections(orchestratorPort, calciteHost, calcitePort);
   }
 
   std::cout << "Orchestrator TCP port: " << orchestratorConnectionAddress.tcp_port << std::endl;
