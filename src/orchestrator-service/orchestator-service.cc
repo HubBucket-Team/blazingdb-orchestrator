@@ -38,28 +38,40 @@ ConnectionAddress orchestratorConnectionAddress;
 ConnectionAddress calciteConnectionAddress;
 ConnectionAddress ralConnectionAddress;
 
-static void setupConnections() {
-
 #ifdef USE_UNIX_SOCKETS
 
-  orchestratorConnectionAddress.unix_socket_path = "/tmp/orchestrator.socket";
-  calciteConnectionAddress.unix_socket_path = "/tmp/calcite.socket";
-  ralConnectionAddress.unix_socket_path = "/tmp/ral.1.socket";
+static void setupUnixSocketConnections(
+        const std::string orchestrator_unix_socket_path = "/tmp/orchestrator.socket",
+        const std::string calcite_unix_socket_path = "/tmp/calcite.socket",
+        const std::string ral_unix_socket_path = "/tmp/ral.1.socket") {
+
+  orchestratorConnectionAddress.unix_socket_path = orchestrator_unix_socket_path;
+  calciteConnectionAddress.unix_socket_path = calcite_unix_socket_path;
+  ralConnectionAddress.unix_socket_path = ral_unix_socket_path;
+}
 
 #else
 
-  orchestratorConnectionAddress.tcp_host = "127.0.0.1";
-  orchestratorConnectionAddress.tcp_port = 9991;
+static void setupTCPConnections(
+    int orchestrator_tcp_port = 8889,
+    const std::string &calcite_tcp_host = "127.0.0.1",
+    int calcite_tcp_port = 8890) {
 
-  calciteConnectionAddress.tcp_host = "127.0.0.1";
-  calciteConnectionAddress.tcp_port = 9991;
+  const std::string orchestrator_tcp_host = "127.0.0.1";
+  const std::string ral_tcp_host = "127.0.0.1";
+  const int ral_tcp_port = 8891;
 
-  ralConnectionAddress.tcp_host = "127.0.0.1";
-  ralConnectionAddress.tcp_port = 9991;
+  orchestratorConnectionAddress.tcp_host = orchestrator_tcp_host;
+  orchestratorConnectionAddress.tcp_port = orchestrator_tcp_port;
+
+  calciteConnectionAddress.tcp_host = calcite_tcp_host;
+  calciteConnectionAddress.tcp_port = calcite_tcp_port;
+
+  ralConnectionAddress.tcp_host = ral_tcp_host;
+  ralConnectionAddress.tcp_port = ral_tcp_port;
+}
 
 #endif
-
-}
 
 static result_pair registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   try {
@@ -410,9 +422,18 @@ auto orchestratorService(const blazingdb::protocol::Buffer &requestBuffer) -> bl
 int
 main(int argc, const char *argv[]) {
 
-  int orchestratorPort = 8890;
-  std::string calciteHost = "127.0.0.1";
-  int calcitePort = 8891;
+#ifdef USE_UNIX_SOCKETS
+
+  //TODO percy add args here if is needed
+  setupUnixSocketConnections();
+
+  blazingdb::protocol::UnixSocketConnection orchestratorConnection(orchestratorConnectionAddress);
+
+#else
+
+  int orchestratorPort = -1;
+  std::string calciteHost;
+  int calcitePort = -1;
 
   if (4 != argc) {
     std::cout << "usage: " << argv[0]
@@ -420,10 +441,7 @@ main(int argc, const char *argv[]) {
               << std::endl;
     
     std::cout << "Using default TCP connection settings: " << std::endl;
-    std::cout << "Orchestrator TCP port: " << orchestratorPort << std::endl;
-    std::cout << "Calcite TCP host: " << calciteHost << std::endl;
-    std::cout << "Calcite TCP port: " << calcitePort << std::endl;
-
+    setupTCPConnections();
   } else {
   
     orchestratorPort = ConnectionUtils::parsePort(argv[1]);
@@ -441,23 +459,21 @@ main(int argc, const char *argv[]) {
         std::cout << "FATAL: Invalid Calcite TCP port " + std::string(argv[3]) << std::endl;
         return EXIT_FAILURE;
     }
+    
+    setupTCPConnections(orchestratorPort, calciteHost, calcitePort);
   }
 
-  Communication::InitializeManager();
-
-  std::cout << "Orchestrator is listening" << std::endl;
-
-  setupConnections();
-
-#ifdef USE_UNIX_SOCKETS
-
-  blazingdb::protocol::UnixSocketConnection orchestratorConnection(orchestratorConnectionAddress);
-
-#else
+  std::cout << "Orchestrator TCP port: " << orchestratorConnectionAddress.tcp_port << std::endl;
+  std::cout << "Calcite TCP host: " << calciteConnectionAddress.tcp_host << std::endl;
+  std::cout << "Calcite TCP port: " << calciteConnectionAddress.tcp_port << std::endl;
 
   blazingdb::protocol::TCPConnection orchestratorConnection(orchestratorConnectionAddress);
 
 #endif
+
+  Communication::InitializeManager();
+
+  std::cout << "Orchestrator is listening" << std::endl;
 
   blazingdb::protocol::Server server(orchestratorConnection);
 
