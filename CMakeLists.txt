@@ -24,6 +24,9 @@ include(CTest)
 # NOTE Configure dependencies (always include this one first)
 include(ConfigureBlazingDBDependencies)
 
+# Configure CUDA
+include(ConfigureCUDA)
+
 # NOTE Do not change the inclusion order
 # Configure dependencies
 include(ConfigureBoost)
