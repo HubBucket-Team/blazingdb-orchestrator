@@ -31,7 +31,8 @@ include(ConfigureFlatBuffers)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBCommunication)
 include(ConfigureRapidJSON)
-
+include(ConfigureGDR)
+include(ConfigureUCX)
 find_package(Threads)
 
 # BEGIN MAIN #
@@ -45,7 +46,12 @@ set(orchestrator_source_files
     src/orchestrator-service/orchestator-service.cc)
 
 add_executable(blazingdb_orchestator_service ${orchestrator_source_files})
-target_link_libraries(blazingdb_orchestator_service Threads::Threads   ${ZEROMQ_STATIC_LIB} ${FLATBUFFERS_STATIC_LIB}  ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${BLAZINGDB_COMMUNICATION_STATIC_LIB} Boost::system)
+target_link_libraries(blazingdb_orchestator_service Threads::Threads   ${ZEROMQ_STATIC_LIB} ${FLATBUFFERS_STATIC_LIB}  ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${BLAZINGDB_COMMUNICATION_STATIC_LIB} Boost::system
+    ${UCX_UCT_STATIC_LIB}
+    ${GDR_STATIC_LIB}
+    ${UCX_UCS_STATIC_LIB}
+    ${UCX_UCM_STATIC_LIB}
+)
 
 # Print the project summary
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
