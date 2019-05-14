@@ -6,7 +6,7 @@
 
 cmake_minimum_required(VERSION 3.11)
 
-project(blazingdb-orchestrator C CXX CUDA)
+project(blazingdb-orchestrator C CXX)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
@@ -23,9 +23,6 @@ include(CTest)
 
 # NOTE Configure dependencies (always include this one first)
 include(ConfigureBlazingDBDependencies)
-
-# Configure CUDA
-include(ConfigureCUDA)
 
 # NOTE Do not change the inclusion order
 # Configure dependencies
