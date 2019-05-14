@@ -6,7 +6,7 @@
 
 cmake_minimum_required(VERSION 3.11)
 
-project(blazingdb-orchestrator)
+project(blazingdb-orchestrator C CXX CUDA)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
