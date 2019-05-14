@@ -54,7 +54,12 @@ target_link_libraries(blazingdb_orchestator_service Threads::Threads   ${ZEROMQ_
     ${GDR_STATIC_LIB}
     ${UCX_UCS_STATIC_LIB}
     ${UCX_UCM_STATIC_LIB}
-    cuda /usr/local/cuda/lib64/libcudart.so
+
+    cudart
+    cuda
+    ${CUDA_CUDA_LIBRARY}
+    ${CUDA_NVRTC_LIBRARY}
+    ${CUDA_NVTX_LIBRARY}
 )
 
 # Print the project summary
