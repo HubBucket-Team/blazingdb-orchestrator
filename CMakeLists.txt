@@ -31,11 +31,12 @@ include(ConfigureCUDA)
 # Configure dependencies
 include(ConfigureBoost)
 include(ConfigureFlatBuffers)
+include(ConfigureGDR)
+include(ConfigureUCX)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBCommunication)
 include(ConfigureRapidJSON)
-include(ConfigureGDR)
-include(ConfigureUCX)
+
 find_package(Threads)
 
 # BEGIN MAIN #
@@ -55,11 +56,9 @@ target_link_libraries(blazingdb_orchestator_service Threads::Threads   ${ZEROMQ_
     ${UCX_UCS_STATIC_LIB}
     ${UCX_UCM_STATIC_LIB}
 
-    cudart
     cuda
     ${CUDA_CUDA_LIBRARY}
     ${CUDA_NVRTC_LIBRARY}
-    ${CUDA_NVTX_LIBRARY}
 )
 
 # Print the project summary
