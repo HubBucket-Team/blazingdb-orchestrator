@@ -24,6 +24,9 @@ include(CTest)
 # NOTE Configure dependencies (always include this one first)
 include(ConfigureBlazingDBDependencies)
 
+# Configure CUDA
+include(ConfigureCUDA)
+
 # NOTE Do not change the inclusion order
 # Configure dependencies
 include(ConfigureBoost)
@@ -48,6 +51,11 @@ set(orchestrator_source_files
 
 add_executable(blazingdb_orchestator_service ${orchestrator_source_files})
 target_link_libraries(blazingdb_orchestator_service Threads::Threads   ${ZEROMQ_STATIC_LIB} ${FLATBUFFERS_STATIC_LIB}  ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${BLAZINGDB_COMMUNICATION_STATIC_LIB} Boost::system
+
+    cuda
+    ${CUDA_CUDA_LIBRARY}
+    ${CUDA_NVRTC_LIBRARY}
+
     ${UCX_UCT_STATIC_LIB}
     ${GDR_STATIC_LIB}
     ${UCX_UCS_STATIC_LIB}
