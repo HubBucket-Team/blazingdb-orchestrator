@@ -4,9 +4,9 @@
 #     Copyright 2018 Alexander Ocsa <alexander@blazingdb.com>
 #=============================================================================
 
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
-project(blazingdb-orchestrator C CXX)
+project(blazingdb-orchestrator C CXX CUDA)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
