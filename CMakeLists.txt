@@ -54,7 +54,6 @@ target_link_libraries(blazingdb_orchestator_service Threads::Threads   ${ZEROMQ_
 
     cuda
     ${CUDA_CUDA_LIBRARY}
-    ${CUDA_NVRTC_LIBRARY}
 
     ${UCX_UCT_STATIC_LIB}
     ${GDR_STATIC_LIB}
