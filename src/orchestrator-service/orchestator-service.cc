@@ -445,6 +445,18 @@ main(int argc, const char *argv[]) {
     
     case 2: {
         const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[1]);
+        
+        if (orchestratorProtocolPort == -1) {
+            std::cout << "FATAL: Invalid Orchestrator TCP ports " + std::string(argv[1]) << std::endl;
+            return EXIT_FAILURE;
+        }
+
+        setupTCPConnections(orchestratorProtocolPort);
+    }
+    break;
+    
+    case 3: {
+        const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[1]);
         const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[2]);
         
         if (orchestratorProtocolPort == -1 || orchestratorCommunicationPort == -1) {
@@ -456,7 +468,7 @@ main(int argc, const char *argv[]) {
     }
     break;
     
-    case 3: {
+    case 4: {
         const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[1]);
         const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[2]);
         
@@ -471,7 +483,7 @@ main(int argc, const char *argv[]) {
     }
     break;
     
-    case 4: {
+    case 5: {
         const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[1]);
         const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[2]);
         
@@ -508,7 +520,7 @@ main(int argc, const char *argv[]) {
 #endif
 
   Communication::InitializeManager(orchestratorCommunicationTcpPort);
-  std::cout << "Communication manager is listening on port" << orchestratorCommunicationTcpPort << std::endl;
+  std::cout << "Communication manager is listening on port: " << orchestratorCommunicationTcpPort << std::endl;
 
   std::cout << "Orchestrator is listening" << std::endl;
 
