@@ -64,7 +64,7 @@ static void setupTCPConnections(
   const int ral_tcp_port = 8891;
 
   orchestratorConnectionAddress.tcp_host = orchestrator_tcp_host;
-  orchestratorConnectionAddress.tcp_port = orchestrator_tcp_port;
+  orchestratorConnectionAddress.tcp_port = orchestrator_protocol_tcp_port;
 
   calciteConnectionAddress.tcp_host = calcite_tcp_host;
   calciteConnectionAddress.tcp_port = calcite_tcp_port;
