@@ -37,6 +37,7 @@ using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffe
 ConnectionAddress orchestratorConnectionAddress;
 ConnectionAddress calciteConnectionAddress;
 ConnectionAddress ralConnectionAddress;
+int orchestratorCommunicationTcpPort;
 
 #ifdef USE_UNIX_SOCKETS
 
@@ -196,7 +197,7 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
   std::cout << "##DML-FS: " << query << std::endl;
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
 
-  auto& manager = Communication::Manager();
+  auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
   Context* context = manager.generateContext(query, 99);
   std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
   std::vector<FileSystemTableGroupSchema> tableSchemas;
@@ -499,7 +500,7 @@ main(int argc, const char *argv[]) {
 
 #endif
 
-  Communication::InitializeManager();
+  Communication::InitializeManager(orchestratorCommunicationTcpPort);
 
   std::cout << "Orchestrator is listening" << std::endl;
 
@@ -522,7 +523,7 @@ main(int argc, const char *argv[]) {
 
   server.handle(&orchestratorService);
 
-  Communication::FinalizeManager();
+  Communication::FinalizeManager(orchestratorCommunicationTcpPort);
 
   return 0;
 }
