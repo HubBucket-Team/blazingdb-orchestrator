@@ -265,7 +265,7 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
                 auto node = cluster[index];
                 const internal::ConcreteAddress *concreteAddress = static_cast<const internal::ConcreteAddress *>(node->address());
                 const std::string host = concreteAddress->ip();
-                const int port = concreteAddress->port();
+                const int port = concreteAddress->protocol_port();
                 ConnectionAddress connectionAddress;
                 connectionAddress.tcp_host = host;
                 connectionAddress.tcp_port = port;
