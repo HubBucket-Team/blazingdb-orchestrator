@@ -42,6 +42,7 @@ int orchestratorCommunicationTcpPort;
 #ifdef USE_UNIX_SOCKETS
 
 static void setupUnixSocketConnections(
+        int orchestrator_communication_tcp_port = 9000,
         const std::string orchestrator_unix_socket_path = "/tmp/orchestrator.socket",
         const std::string calcite_unix_socket_path = "/tmp/calcite.socket",
         const std::string ral_unix_socket_path = "/tmp/ral.1.socket") {
@@ -49,6 +50,8 @@ static void setupUnixSocketConnections(
   orchestratorConnectionAddress.unix_socket_path = orchestrator_unix_socket_path;
   calciteConnectionAddress.unix_socket_path = calcite_unix_socket_path;
   ralConnectionAddress.unix_socket_path = ral_unix_socket_path;
+  
+  orchestratorCommunicationTcpPort = orchestrator_communication_tcp_port;
 }
 
 #else
@@ -428,11 +431,28 @@ main(int argc, const char *argv[]) {
 
 #ifdef USE_UNIX_SOCKETS
 
-  //TODO percy add args here if is needed
-  setupUnixSocketConnections();
+  std::cout << "usage: " << argv[0] << " <ORCHESTRATOR_COMMUNICATION_TCP_PORT>" << std::endl;
+
+  if (argc == 2) {
+    const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[1]);
+    
+    if (orchestratorCommunicationPort == -1) {
+      std::cout << "FATAL: Invalid Orchestrator TCP ports " + std::string(argv[1]) + " " + std::string(argv[1]) << std::endl;
+      return EXIT_FAILURE;
+    }
+    
+    setupUnixSocketConnections(orchestratorCommunicationPort);
+  } else {
+    // when the user doesnt enter any args
+    setupUnixSocketConnections();
+  }
 
   blazingdb::protocol::UnixSocketConnection orchestratorConnection(orchestratorConnectionAddress);
 
+  std::cout << "orchestrator unix socket path: " << orchestratorConnectionAddress.unix_socket_path << std::endl;
+  std::cout << "calcite unix socket path: " << calciteConnectionAddress.unix_socket_path << std::endl;
+  std::cout << "ral unix socket path: " << ralConnectionAddress.unix_socket_path << std::endl;
+  
 #else
 
   std::cout << "usage: " << argv[0] << " <ORCHESTRATOR_PROTOCOL_TCP_PORT> <ORCHESTRATOR_COMMUNICATION_TCP_PORT> <CALCITE_TCP_[IP|HOSTNAME]> <CALCITE_TCP_PORT>" << std::endl;
