@@ -253,6 +253,8 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
         futures.emplace_back(std::async(std::launch::async, [&, index]() {
             try {
 
+                auto node = cluster[index];
+
 #ifdef USE_UNIX_SOCKETS
 
                 const std::string unix_socket_path = "/tmp/ral." + std::to_string(node->unixSocketId()) + ".socket";
@@ -261,8 +263,6 @@ static result_pair  dmlFileSystemService (uint64_t accessToken, Buffer&& buffer)
 
 #else
 
-
-                auto node = cluster[index];
                 const internal::ConcreteAddress *concreteAddress = static_cast<const internal::ConcreteAddress *>(node->address());
                 const std::string host = concreteAddress->ip();
                 const int port = concreteAddress->protocol_port();
