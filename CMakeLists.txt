@@ -35,6 +35,10 @@ include(ConfigureRapidJSON)
 find_package(Threads)
 
 # BEGIN MAIN #
+
+# TODO percy manage cuda definitions
+add_definitions(${CXX_DEFINES})
+
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
     ${RAPIDJSON_INCLUDE_DIRS}
