@@ -59,6 +59,8 @@ public:
   }
 
   Status dropTable(orchestrator::DDLDropTableRequestMessage& payload){
+      
+      
     try {
       int64_t sessionToken = 0;
       auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_DROP_TABLE,
@@ -66,6 +68,11 @@ public:
                                       payload);
 
       Buffer responseBuffer = client.send(bufferedData);
+
+
+      std::cout << "luegosendAAAAAAAAAAAAAAAAAAAAAAAAAAAA " << std::endl;
+
+
       if (responseBuffer.size() == 0) {
         throw std::runtime_error("Orchestrattor::DropTable failed! responseBuffer from calcite is zero");
       }
