@@ -401,9 +401,9 @@ static result_pair ddlDropTableService(uint64_t accessToken, Buffer&& buffer)  {
   std::cout << "##DDL Drop Table: " << std::endl;
   std::cout << "##DEBUG Calcite connection tcp_host: " << calciteConnectionAddress.tcp_host << std::endl;
   std::cout << "##DEBUG Calcite connection tcp_port: " << calciteConnectionAddress.tcp_port << std::endl;
-  calcite::CalciteClient calcite_client(calciteConnectionAddress);
 
   try {
+    calcite::CalciteClient calcite_client(calciteConnectionAddress);
     orchestrator::DDLDropTableRequestMessage payload(buffer.data());
     std::cout << "cbname:" << payload.dbName << std::endl;
     std::cout << "table.name:" << payload.name << std::endl;
