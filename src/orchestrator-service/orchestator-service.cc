@@ -41,6 +41,8 @@ int orchestratorCommunicationTcpPort;
 
 #ifdef USE_UNIX_SOCKETS
 
+std::cout << "##DEBUG Conexion by Socket: " << std::endl;
+
 static void setupUnixSocketConnections(
         int orchestrator_communication_tcp_port = 9000,
         const std::string orchestrator_unix_socket_path = "/tmp/orchestrator.socket",
@@ -55,6 +57,8 @@ static void setupUnixSocketConnections(
 }
 
 #else
+
+std::cout << "##DEBUG Conexion by TCP: " << std::endl;
 
 static void setupTCPConnections(
     int orchestrator_protocol_tcp_port = 8889,
