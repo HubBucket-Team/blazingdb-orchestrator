@@ -393,7 +393,7 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
 
 static result_pair ddlDropTableService(uint64_t accessToken, Buffer&& buffer)  {
   std::cout << "##DDL Drop Table: " << std::endl;
-  std::cout << "##DEBUG calcite connection address: " << calciteConnectionAddress << std::endl;
+  //std::cout << "##DEBUG calcite connection address: " << calciteConnectionAddress << std::endl;
 
   try {
     calcite::CalciteClient calcite_client(calciteConnectionAddress);
