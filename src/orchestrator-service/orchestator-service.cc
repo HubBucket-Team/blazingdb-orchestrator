@@ -41,13 +41,13 @@ int orchestratorCommunicationTcpPort;
 
 #ifdef USE_UNIX_SOCKETS
 
-//std::cout << "##DEBUG Conexion by Socket: " << std::endl;
-
 static void setupUnixSocketConnections(
         int orchestrator_communication_tcp_port = 9000,
         const std::string orchestrator_unix_socket_path = "/tmp/orchestrator.socket",
         const std::string calcite_unix_socket_path = "/tmp/calcite.socket",
         const std::string ral_unix_socket_path = "/tmp/ral.1.socket") {
+
+  std::cout << "##DEBUG Conexion by Socket: " << std::endl;
 
   orchestratorConnectionAddress.unix_socket_path = orchestrator_unix_socket_path;
   calciteConnectionAddress.unix_socket_path = calcite_unix_socket_path;
@@ -57,8 +57,6 @@ static void setupUnixSocketConnections(
 }
 
 #else
-
-//std::cout << "##DEBUG Conexion by TCP: " << std::endl;
 
 static void setupTCPConnections(
     int orchestrator_protocol_tcp_port = 8889,
@@ -70,11 +68,13 @@ static void setupTCPConnections(
   const std::string ral_tcp_host = "127.0.0.1";
   const int ral_tcp_port = 8891;
 
+  std::cout << "##DEBUG Conexion by TCP: " << std::endl;
+
   orchestratorConnectionAddress.tcp_host = orchestrator_tcp_host;
   orchestratorConnectionAddress.tcp_port = orchestrator_protocol_tcp_port;
 
-  //std::cout << "##DEBUG setupTCPConnections: " << calcite_tcp_host << std::endl;
-  //std::cout << "##DEBUG setupTCPConnections: " << calcite_tcp_port << std::endl;
+  std::cout << "##DEBUG setupTCPConnections: " << calcite_tcp_host << std::endl;
+  std::cout << "##DEBUG setupTCPConnections: " << calcite_tcp_port << std::endl;
   calciteConnectionAddress.tcp_host = calcite_tcp_host;
   calciteConnectionAddress.tcp_port = calcite_tcp_port;
 
