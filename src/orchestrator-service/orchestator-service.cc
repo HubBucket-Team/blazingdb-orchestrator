@@ -542,7 +542,7 @@ main(int argc, const char *argv[]) {
     }
   }
 
-  std::cout << "Orchestrator protocol TCP host: " << orchestratorConnectionAddress.orchestratorHost << std::endl;
+  std::cout << "Orchestrator protocol TCP host: " << orchestratorConnectionAddress.tcp_host << std::endl;
   std::cout << "Orchestrator protocol TCP port: " << orchestratorConnectionAddress.tcp_port << std::endl;
   std::cout << "Orchestrator communication TCP port: " << orchestratorCommunicationTcpPort << std::endl;
   std::cout << "Calcite TCP host: " << calciteConnectionAddress.tcp_host << std::endl;
