@@ -9,6 +9,7 @@
 
 #include <blazingdb/protocol/message/interpreter/messages.h>
 #include <blazingdb/protocol/message/io/file_system.h>
+#include <blazingdb/protocol/message/orchestrator/messages.h>
 
 namespace blazingdb {
 namespace protocol {
@@ -114,6 +115,24 @@ public:
     ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
     return responsePayload.getBufferData();
   }
+
+  CreateTableResponseMessage parseSchema( Buffer& buffer, int64_t access_token) {
+    auto bufferedData = MakeRequest(orchestrator:: MessageType_DDL_CREATE_TABLE,
+                                     access_token,
+                                     buffer
+                                     );
+
+    Buffer responseBuffer = client.send(bufferedData);
+    ResponseMessage response{responseBuffer.data()};
+
+    if (response.getStatus() == Status_Error) {
+      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
+      throw std::runtime_error(errorMessage.getMessage());
+    }
+    CreateTableResponseMessage responsePayload(response.getPayloadBuffer());
+    return responsePayload;
+  }
+
 
   std::vector<::gdf_dto::gdf_column> getResult(uint64_t resultToken, int64_t access_token){
     interpreter::GetResultRequestMessage payload{resultToken};
