@@ -18,7 +18,7 @@ class InterpreterClient {
 public:
 
     InterpreterClient(const ConnectionAddress &ralConnectionAddress)
-    : connection(ralConnectionAddress), client(connection)
+    : client(ralConnectionAddress)
     { }
 
   ExecutePlanResponseMessage
@@ -184,7 +184,7 @@ protected:
 #ifdef USE_UNIX_SOCKETS
   blazingdb::protocol::UnixSocketConnection connection;
 #else
-  blazingdb::protocol::TCPConnection connection;
+  
 #endif
 
   blazingdb::protocol::Client client;

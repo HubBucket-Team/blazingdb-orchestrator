@@ -17,7 +17,7 @@ namespace calcite {
 class CalciteClient {
 public:
   CalciteClient(const ConnectionAddress &calciteConnectionAddress)
-      : connection(calciteConnectionAddress), client(connection) {
+      : client(calciteConnectionAddress) {
   }
 
   DMLResponseMessage runQuery(std::string query) {
@@ -94,8 +94,6 @@ private:
   blazingdb::protocol::UnixSocketConnection connection;
 
   #else
-  
-  blazingdb::protocol::TCPConnection connection;
   
   #endif
   
