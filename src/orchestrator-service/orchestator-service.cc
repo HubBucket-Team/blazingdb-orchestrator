@@ -34,7 +34,6 @@ using namespace blazingdb::protocol;
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 
 
-ConnectionAddress orchestratorConnectionAddress;
 ConnectionAddress calciteConnectionAddress;
 ConnectionAddress ralConnectionAddress;
 int orchestratorCommunicationTcpPort;
@@ -57,17 +56,14 @@ static void setupUnixSocketConnections(
 #else
 
 static void setupTCPConnections(
-    const std::string &orchestrator_tcp_host = "127.0.0.1",
-    int orchestrator_protocol_tcp_port = 8889,
-    int orchestrator_communication_tcp_port = 9000,
-    const std::string &calcite_tcp_host = "127.0.0.1",
-    int calcite_tcp_port = 8890) {
+    int orchestrator_communication_tcp_port,
+    int orchestrator_protocol_tcp_port,
+    const std::string &calcite_tcp_host,
+    int calcite_tcp_port) {
 
+  //TODO percy refactor this until table scan is ready in distribution
   const std::string ral_tcp_host = "127.0.0.1";
   const int ral_tcp_port = 8891;
-
-  orchestratorConnectionAddress.tcp_host = orchestrator_tcp_host;
-  orchestratorConnectionAddress.tcp_port = orchestrator_protocol_tcp_port;
 
   calciteConnectionAddress.tcp_host = calcite_tcp_host;
   calciteConnectionAddress.tcp_port = calcite_tcp_port;
@@ -456,99 +452,35 @@ main(int argc, const char *argv[]) {
   
 #else
 
-  std::cout << "usage: " << argv[0] << " <ORCHESTRATOR_HOST[IP]> <ORCHESTRATOR_PROTOCOL_TCP_PORT> <ORCHESTRATOR_COMMUNICATION_TCP_PORT> <CALCITE_TCP_[IP|HOSTNAME]> <CALCITE_TCP_PORT>" << std::endl;
+  std::cout << "usage: " << argv[0] << " <ORCHESTRATOR_HTTP_COMMUNICATION_PORT> <ORCHESTRATOR_TCP_PROTOCOL_PORT> <CALCITE_TCP_PROTOCOL_[IP|HOSTNAME]> <CALCITE_TCP_PROTOCOL_PORT>" << std::endl;
 
-  switch (argc) {
-    case 1: {
-        setupTCPConnections();
-    }
-    break;
-    
-    case 2: {
-        const std::string orchestratorHost = std::string(argv[1]);
-
-        setupTCPConnections(orchestratorHost);
-    }
-    break;
-    
-    case 3: {
-        const std::string orchestratorHost = std::string(argv[1]);
-        const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[2]);
-        
-        if (orchestratorProtocolPort == -1) {
-            std::cout << "FATAL: Invalid Orchestrator TCP ports " + std::string(argv[2]) << std::endl;
-            return EXIT_FAILURE;
-        }
-
-        setupTCPConnections(orchestratorHost, orchestratorProtocolPort);
-    }
-    break;
-    
-    case 4: {
-        const std::string orchestratorHost = std::string(argv[1]);
-        const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[2]);
-        const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[3]);
-        
-        if (orchestratorProtocolPort == -1 || orchestratorCommunicationPort == -1) {
-            std::cout << "FATAL: Invalid Orchestrator TCP ports " + std::string(argv[2]) + " " + std::string(argv[3]) << std::endl;
-            return EXIT_FAILURE;
-        }
-
-        setupTCPConnections(orchestratorHost, orchestratorProtocolPort, orchestratorCommunicationPort);
-    }
-    break;
-    
-    case 5: {
-        const std::string orchestratorHost = std::string(argv[1]);
-        const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[2]);
-        const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[3]);
-        
-        if (orchestratorProtocolPort == -1 || orchestratorCommunicationPort == -1) {
-            std::cout << "FATAL: Invalid Orchestrator TCP ports " + std::string(argv[2]) + " " + std::string(argv[3]) << std::endl;
-            return EXIT_FAILURE;
-        }
-
-        const std::string calciteHost = argv[4];
-
-        setupTCPConnections(orchestratorHost, orchestratorProtocolPort, orchestratorCommunicationPort, calciteHost);
-    }
-    break;
-    
-    case 6: {
-        const std::string orchestratorHost = std::string(argv[1]);
-        const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[2]);
-        const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[3]);
-        
-        if (orchestratorProtocolPort == -1 || orchestratorCommunicationPort == -1) {
-            std::cout << "FATAL: Invalid Orchestrator TCP ports " + std::string(argv[2]) + " " + std::string(argv[3]) << std::endl;
-            return EXIT_FAILURE;
-        }
-
-        const std::string calciteHost = argv[4];
-        const int calcitePort = ConnectionUtils::parsePort(argv[5]);
-        
-        if (calcitePort == -1) {
-            std::cout << "FATAL: Invalid Calcite TCP port " + std::string(argv[5]) << std::endl;
-            return EXIT_FAILURE;
-        }
-        
-        setupTCPConnections(orchestratorHost, orchestratorProtocolPort, orchestratorCommunicationPort, calciteHost, calcitePort);
-    }
-    break;
-    
-    default: {
-        std::cout << "FATAL: Invalid number of arguments" << std::endl;
-        return EXIT_FAILURE;
-    }
+  if (argc != 5) {
+      std::cout << "FATAL: Invalid number of arguments" << std::endl;
+      return EXIT_FAILURE;
   }
 
-  std::cout << "Orchestrator protocol TCP host: " << orchestratorConnectionAddress.tcp_host << std::endl;
-  std::cout << "Orchestrator protocol TCP port: " << orchestratorConnectionAddress.tcp_port << std::endl;
-  std::cout << "Orchestrator communication TCP port: " << orchestratorCommunicationTcpPort << std::endl;
-  std::cout << "Calcite TCP host: " << calciteConnectionAddress.tcp_host << std::endl;
-  std::cout << "Calcite TCP port: " << calciteConnectionAddress.tcp_port << std::endl;
+  const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[1]);  
+  const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[2]);
+  
+  if (orchestratorProtocolPort == -1 || orchestratorCommunicationPort == -1) {
+      std::cout << "FATAL: Invalid Orchestrator TCP ports " + std::string(argv[1]) + " " + std::string(argv[2]) << std::endl;
+      return EXIT_FAILURE;
+  }
+  
+  const std::string calciteHost = argv[3];
+  const int calcitePort = ConnectionUtils::parsePort(argv[4]);
+  
+  if (calcitePort == -1) {
+      std::cout << "FATAL: Invalid Calcite TCP port " + std::string(argv[4]) << std::endl;
+      return EXIT_FAILURE;
+  }
+  
+  setupTCPConnections(orchestratorCommunicationPort, orchestratorProtocolPort, calciteHost, calcitePort);
 
-  blazingdb::protocol::TCPConnection orchestratorConnection(orchestratorConnectionAddress);
+  std::cout << "Orchestrator HTTP communication port: " << orchestratorCommunicationTcpPort << std::endl;
+  std::cout << "Orchestrator TCP protocol port: " << orchestratorProtocolPort << std::endl;
+  std::cout << "Calcite TCP protocol host: " << calciteConnectionAddress.tcp_host << std::endl;
+  std::cout << "Calcite TCP protocol port: " << calciteConnectionAddress.tcp_port << std::endl;
 
 #endif
 
@@ -557,7 +489,7 @@ main(int argc, const char *argv[]) {
 
   std::cout << "Orchestrator is listening" << std::endl;
 
-  blazingdb::protocol::Server server(orchestratorConnection);
+  blazingdb::protocol::Server server(orchestratorProtocolPort);
 
   services.insert(std::make_pair(orchestrator::MessageType_DML, &dmlService));
   services.insert(std::make_pair(orchestrator::MessageType_DML_FS, &dmlFileSystemService));
