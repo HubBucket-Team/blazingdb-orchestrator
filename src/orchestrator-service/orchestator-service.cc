@@ -135,11 +135,13 @@ void add_table(orchestrator::DDLCreateTableRequestMessage request,
 			tables.tables[table_index].tableSchema = schema;
 			tables.tables[table_index].schemaType = request.schemaType;
 			tables.tables[table_index].gdf = request.gdf;
+      break;
 		}
 	}
 
 	if(!existed_previously){
 		blazingdb::message::io::FileSystemBlazingTableSchema new_schema;
+    new_schema.name = request.name;
 		new_schema.tableSchema = schema;
 		new_schema.schemaType = request.schemaType;
 		new_schema.gdf = request.gdf;
@@ -258,26 +260,26 @@ std::string convert_dtype_string(int dtype){
 			return "GDF_FLOAT32";
 	case 6:
 			return "GDF_FLOAT64";
-	case 7:
-			return "GDF_DATE32";
+  case 7:
+      return "GDF_BOOL8";
 	case 8:
-			return "GDF_DATE65";
+			return "GDF_DATE32";
 	case 9:
-			return "GDF_TIMESTAMP";
+			return "GDF_DATE65";
 	case 10:
-			return "GDF_CATEGORY";
+			return "GDF_TIMESTAMP";
 	case 11:
-			return "GDF_STRING";
+			return "GDF_CATEGORY";
 	case 12:
+			return "GDF_STRING";
+	case 13:
 			return "GDF_STRING_CATEGORY";
 	default:
 			return "invalid";
 
 	}
 }
-//TODO:
-//TODOL:
-//dont fucking FORGET THIS DUDE ADD BOOL8
+
 int convert_string_dtype(std::string str){
 	if(str == "GDF_INT8"){
 		return 1;
@@ -291,18 +293,20 @@ int convert_string_dtype(std::string str){
 		return 5;
 	}else if(str == "GDF_FLOAT64"){
 		return 6;
-	}else if(str == "GDF_DATE32"){
+	}else if(str == "GDF_BOOL8"){
 		return 7;
-	}else if(str == "GDF_DATE64"){
+  }else if(str == "GDF_DATE32"){
 		return 8;
-	}else if(str == "GDF_TIMESTAMP"){
+	}else if(str == "GDF_DATE64"){
 		return 9;
-	}else if(str == "GDF_CATEGORY"){
+	}else if(str == "GDF_TIMESTAMP"){
 		return 10;
-	}else if(str == "GDF_STRING"){
+	}else if(str == "GDF_CATEGORY"){
 		return 11;
-	}else if(str == "GDF_STRING_CATEGORY"){
+	}else if(str == "GDF_STRING"){
 		return 12;
+	}else if(str == "GDF_STRING_CATEGORY"){
+		return 13;
 	}else{
 		return -1;
 	}

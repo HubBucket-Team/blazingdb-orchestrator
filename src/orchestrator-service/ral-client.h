@@ -117,7 +117,7 @@ public:
   }
 
   CreateTableResponseMessage parseSchema( Buffer& buffer, int64_t access_token) {
-    auto bufferedData = MakeRequest(orchestrator:: MessageType_DDL_CREATE_TABLE,
+    auto bufferedData = MakeRequest(interpreter::MessageType_LoadCsvSchema,  // here I am using LoadCsvSchema but this funcion now is for parsing either CSV or Parquet
                                      access_token,
                                      buffer
                                      );
