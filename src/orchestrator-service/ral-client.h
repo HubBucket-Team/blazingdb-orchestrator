@@ -21,27 +21,6 @@ public:
       // TODO: remove global. @see main()
       : connection("/tmp/ral.socket"), client(connection) {}
 
-  ExecutePlanResponseMessage
-  executeDirectPlan(std::string                            logicalPlan,
-                    const blazingdb::protocol::TableGroup *tableGroup,
-                    int64_t                                access_token) {
-    ExecutePlanDirectRequestMessage message{logicalPlan, tableGroup};
-    auto bufferedData =
-        MakeRequest(interpreter::MessageType_ExecutePlan,
-                    access_token,
-                    message);
-
-    Buffer          responseBuffer = client.send(bufferedData);
-    ResponseMessage response{responseBuffer.data()};
-
-    if (response.getStatus() == Status_Error) {
-      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-      throw std::runtime_error(errorMessage.getMessage());
-    }
-    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload;
-  }
-
   ExecutePlanResponseMessage executeFSDirectPlan(std::string logicalPlan,
                     blazingdb::message::io::FileSystemTableGroupSchema& tableGroup,
                     int64_t                                access_token) {
@@ -70,40 +49,6 @@ public:
     auto bufferedData = MakeRequest(interpreter::MessageType_ExecutePlan,
                                      access_token,
                                      message);
-
-    Buffer responseBuffer = client.send(bufferedData);
-    ResponseMessage response{responseBuffer.data()};
-
-    if (response.getStatus() == Status_Error) {
-      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-      throw std::runtime_error(errorMessage.getMessage());
-    }
-    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload.getBufferData();
-  }
-
-  std::shared_ptr<flatbuffers::DetachedBuffer> loadCsvSchema( Buffer& buffer, int64_t access_token) {
-    auto bufferedData = MakeRequest(interpreter::MessageType_LoadCsvSchema,
-                                     access_token,
-                                     buffer
-                                     );
-
-    Buffer responseBuffer = client.send(bufferedData);
-    ResponseMessage response{responseBuffer.data()};
-
-    if (response.getStatus() == Status_Error) {
-      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-      throw std::runtime_error(errorMessage.getMessage());
-    }
-    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload.getBufferData();
-  }
-
-  std::shared_ptr<flatbuffers::DetachedBuffer> loadParquetSchema( Buffer& buffer, int64_t access_token) {
-    auto bufferedData = MakeRequest(interpreter::MessageType_LoadParquetSchema,
-                                     access_token,
-                                     buffer
-                                     );
 
     Buffer responseBuffer = client.send(bufferedData);
     ResponseMessage response{responseBuffer.data()};

@@ -58,40 +58,6 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
-static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
-  std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
-   try {
-    interpreter::InterpreterClient ral_client;
-    resultBuffer = ral_client.loadCsvSchema(buffer, accessToken);
-
-  } catch (std::runtime_error &error) {
-    // error with query plan: not resultToken
-    std::cout << "In function loadCsvSchema: " << error.what() << std::endl;
-    std::string stringErrorMessage = "Cannot load the csv schema: " + std::string(error.what());
-    ResponseErrorMessage errorMessage{ stringErrorMessage };
-    return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
-  return std::make_pair(Status_Success, resultBuffer);
-}
-
-
-static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
-  std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
-   try {
-    interpreter::InterpreterClient ral_client;
-    resultBuffer = ral_client.loadParquetSchema(buffer, accessToken);
-
-  } catch (std::runtime_error &error) {
-    // error with query plan: not resultToken
-    std::cout << "In function loadParquetSchema: " << error.what() << std::endl;
-    std::string stringErrorMessage = "Cannot load the parquet schema: " + std::string(error.what());
-    ResponseErrorMessage errorMessage{ stringErrorMessage };
-    return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
-  return std::make_pair(Status_Success, resultBuffer);
-}
-
-
 static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buffer)  {
   srand(time(0));
   int64_t token = rand();
@@ -203,46 +169,6 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
   }
   return std::make_pair(Status_Success, resultBuffer);
 }
-
-static result_pair dmlService(uint64_t accessToken, Buffer&& buffer)  {
-  orchestrator::DMLRequestMessage requestPayload(buffer.data());
-  auto query = requestPayload.getQuery();
-  std::cout << "DML: " << query << std::endl;
-  std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
-
-  try {
-    calcite::CalciteClient calcite_client;
-    auto response = calcite_client.runQuery(query);
-    auto logicalPlan = response.getLogicalPlan();
-    auto time = response.getTime();
-    std::cout << "plan:" << logicalPlan << std::endl;
-    std::cout << "time:" << time << std::endl;
-    try {
-      interpreter::InterpreterClient ral_client;
-
-      auto executePlanResponseMessage = ral_client.executeDirectPlan(
-          logicalPlan, requestPayload.getTableGroup(), accessToken);
-      auto nodeInfo = executePlanResponseMessage.getNodeInfo();
-      auto dmlResponseMessage = orchestrator::DMLResponseMessage(
-          executePlanResponseMessage.getResultToken(),
-          nodeInfo, time);
-      resultBuffer = dmlResponseMessage.getBufferData();
-    } catch (std::runtime_error &error) {
-      // error with query plan: not resultToken
-      std::cout << "In function dmlService: " << error.what() << std::endl;
-      std::string stringErrorMessage = "Error on the communication between Orchestrator and RAL: " + std::string(error.what());
-      ResponseErrorMessage errorMessage{ stringErrorMessage };
-      return std::make_pair(Status_Error, errorMessage.getBufferData());
-    }
-  } catch (std::runtime_error &error) {
-    // error with query: not logical plan error
-    std::cout << "In function dmlService: " << error.what() << std::endl;
-    std::string stringErrorMessage = "Error on the communication between Orchestrator and Calcite: " + std::string(error.what());
-    ResponseErrorMessage errorMessage{ stringErrorMessage };
-    return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
-  return std::make_pair(Status_Success, resultBuffer);
-};
 
 std::string convert_dtype_string(int dtype){
 	switch(dtype){
@@ -459,7 +385,6 @@ main(int argc, const char *argv[]) {
   blazingdb::protocol::UnixSocketConnection connection("/tmp/orchestrator.socket");
   blazingdb::protocol::Server server(connection);
 
-  services.insert(std::make_pair(orchestrator::MessageType_DML, &dmlService));
   services.insert(std::make_pair(orchestrator::MessageType_DML_FS, &dmlFileSystemService));
 
   services.insert(std::make_pair(orchestrator::MessageType_DDL_CREATE_TABLE, &ddlCreateTableService));
@@ -470,9 +395,6 @@ main(int argc, const char *argv[]) {
 
   services.insert(std::make_pair(orchestrator::MessageType_RegisterFileSystem, &registerFileSystem));
   services.insert(std::make_pair(orchestrator::MessageType_DeregisterFileSystem, &deregisterFileSystem));
-
-  services.insert(std::make_pair(orchestrator::MessageType_LoadCsvSchema, &loadCsvSchema));
-  services.insert(std::make_pair(orchestrator::MessageType_LoadParquetSchema, &loadParquetSchema));
 
   server.handle(&orchestratorService);
   return 0;
