@@ -265,7 +265,7 @@ std::string convert_dtype_string(int dtype){
 	case 8:
 			return "GDF_DATE32";
 	case 9:
-			return "GDF_DATE65";
+			return "GDF_DATE64";
 	case 10:
 			return "GDF_TIMESTAMP";
 	case 11:
