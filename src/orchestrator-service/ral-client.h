@@ -44,23 +44,6 @@ public:
     return responsePayload;
   }
 
-  std::shared_ptr<flatbuffers::DetachedBuffer> executePlan(std::string logicalPlan, const ::blazingdb::protocol::TableGroupDTO &tableGroup, int64_t access_token)  {
-    ExecutePlanRequestMessage message{logicalPlan, tableGroup};
-    auto bufferedData = MakeRequest(interpreter::MessageType_ExecutePlan,
-                                     access_token,
-                                     message);
-
-    Buffer responseBuffer = client.send(bufferedData);
-    ResponseMessage response{responseBuffer.data()};
-
-    if (response.getStatus() == Status_Error) {
-      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-      throw std::runtime_error(errorMessage.getMessage());
-    }
-    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload.getBufferData();
-  }
-
   CreateTableResponseMessage parseSchema( Buffer& buffer, int64_t access_token) {
     auto bufferedData = MakeRequest(interpreter::MessageType_LoadCsvSchema,  // here I am using LoadCsvSchema but this funcion now is for parsing either CSV or Parquet
                                      access_token,
