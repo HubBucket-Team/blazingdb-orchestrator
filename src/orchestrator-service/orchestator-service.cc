@@ -191,7 +191,7 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
           auto itEnd = tables.tables[k].tableSchema.files.end();
           for (int j = 0; j < cluster.size() && itBegin != itEnd; ++j) {
               std::ptrdiff_t offset = std::min((std::ptrdiff_t)quantity, std::distance(itBegin, itEnd));
-              tableSchemas[j].table[k].tableSchema.files.assign(itBegin, itBegin + offset);
+              tableSchemas[j].tables[k].tableSchema.files.assign(itBegin, itBegin + offset);
               itBegin += offset;
           }
         }
