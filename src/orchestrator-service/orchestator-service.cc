@@ -111,38 +111,7 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
-static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
-  std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
-   try {
-    interpreter::InterpreterClient ral_client(ralConnectionAddress);
-    resultBuffer = ral_client.loadCsvSchema(buffer, accessToken);
 
-  } catch (std::runtime_error &error) {
-    // error with query plan: not resultToken
-    std::cout << "In function loadCsvSchema: " << error.what() << std::endl;
-    std::string stringErrorMessage = "Cannot load the csv schema: " + std::string(error.what());
-    ResponseErrorMessage errorMessage{ stringErrorMessage };
-    return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
-  return std::make_pair(Status_Success, resultBuffer);
-}
-
-
-static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
-  std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
-   try {
-    interpreter::InterpreterClient ral_client(ralConnectionAddress);
-    resultBuffer = ral_client.loadParquetSchema(buffer, accessToken);
-
-  } catch (std::runtime_error &error) {
-    // error with query plan: not resultToken
-    std::cout << "In function loadParquetSchema: " << error.what() << std::endl;
-    std::string stringErrorMessage = "Cannot load the parquet schema: " + std::string(error.what());
-    ResponseErrorMessage errorMessage{ stringErrorMessage };
-    return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
-  return std::make_pair(Status_Success, resultBuffer);
-}
 
 
 static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buffer)  {
