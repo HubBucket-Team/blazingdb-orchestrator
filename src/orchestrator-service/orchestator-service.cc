@@ -354,42 +354,6 @@ std::string convert_dtype_string(int dtype){
 	}
 }
 
-  try {
-    calcite::CalciteClient calcite_client(calciteConnectionAddress);
-    auto response = calcite_client.runQuery(query);
-    auto logicalPlan = response.getLogicalPlan();
-    auto time = response.getTime();
-    std::cout << "plan:" << logicalPlan << std::endl;
-    std::cout << "time:" << time << std::endl;
-    try {
-      interpreter::InterpreterClient ral_client(ralConnectionAddress);
-
-      auto executePlanResponseMessage = ral_client.executeDirectPlan(
-          logicalPlan, requestPayload.getTableGroup(), accessToken);
-      auto nodeInfo = executePlanResponseMessage.getNodeInfo();
-      auto dmlResponseMessage = orchestrator::DMLResponseMessage(
-          executePlanResponseMessage.getResultToken(),
-          nodeInfo, time);
-      resultBuffer = dmlResponseMessage.getBufferData();
-    } catch (std::runtime_error &error) {
-      // error with query plan: not resultToken
-      std::cout << "In function dmlService: " << error.what() << std::endl;
-      std::string stringErrorMessage = "Error on the communication between Orchestrator and RAL: " + std::string(error.what());
-      ResponseErrorMessage errorMessage{ stringErrorMessage };
-      return std::make_pair(Status_Error, errorMessage.getBufferData());
-    }
-  } catch (std::runtime_error &error) {
-    // error with query: not logical plan error
-    std::cout << "In function dmlService: " << error.what() << std::endl;
-    std::string stringErrorMessage = "Error on the communication between Orchestrator and Calcite: " + std::string(error.what());
-    ResponseErrorMessage errorMessage{ stringErrorMessage };
-    return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
-  return std::make_pair(Status_Success, resultBuffer);
-};
-
-// NOTE percy delete this
-/*
 int convert_string_dtype(std::string str){
 	if(str == "GDF_INT8"){
 		return 1;
@@ -421,7 +385,6 @@ int convert_string_dtype(std::string str){
 		return -1;
 	}
 }
-*/
 
 static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer)  {
 
