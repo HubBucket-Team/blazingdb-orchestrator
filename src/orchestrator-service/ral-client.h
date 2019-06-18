@@ -9,6 +9,7 @@
 
 #include <blazingdb/protocol/message/interpreter/messages.h>
 #include <blazingdb/protocol/message/io/file_system.h>
+#include <blazingdb/protocol/message/orchestrator/messages.h>
 
 namespace blazingdb {
 namespace protocol {
@@ -20,27 +21,6 @@ public:
     InterpreterClient(const ConnectionAddress &ralConnectionAddress)
     : client(ralConnectionAddress)
     { }
-
-  ExecutePlanResponseMessage
-  executeDirectPlan(std::string                            logicalPlan,
-                    const blazingdb::protocol::TableGroup *tableGroup,
-                    int64_t                                access_token) {
-    ExecutePlanDirectRequestMessage message{logicalPlan, tableGroup};
-    auto bufferedData =
-        MakeRequest(interpreter::MessageType_ExecutePlan,
-                    access_token,
-                    message);
-
-    Buffer          responseBuffer = client.send(bufferedData);
-    ResponseMessage response{responseBuffer.data()};
-
-    if (response.getStatus() == Status_Error) {
-      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-      throw std::runtime_error(errorMessage.getMessage());
-    }
-    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload;
-  }
 
   ExecutePlanResponseMessage executeFSDirectPlan(std::string logicalPlan,
                     blazingdb::message::io::FileSystemTableGroupSchema& tableGroup,
@@ -66,25 +46,8 @@ public:
     return responsePayload;
   }
 
-  std::shared_ptr<flatbuffers::DetachedBuffer> executePlan(std::string logicalPlan, const ::blazingdb::protocol::TableGroupDTO &tableGroup, int64_t access_token)  {
-    ExecutePlanRequestMessage message{logicalPlan, tableGroup};
-    auto bufferedData = MakeRequest(interpreter::MessageType_ExecutePlan,
-                                     access_token,
-                                     message);
-
-    Buffer responseBuffer = client.send(bufferedData);
-    ResponseMessage response{responseBuffer.data()};
-
-    if (response.getStatus() == Status_Error) {
-      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-      throw std::runtime_error(errorMessage.getMessage());
-    }
-    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload.getBufferData();
-  }
-
-  std::shared_ptr<flatbuffers::DetachedBuffer> loadCsvSchema( Buffer& buffer, int64_t access_token) {
-    auto bufferedData = MakeRequest(interpreter::MessageType_LoadCsvSchema,
+  CreateTableResponseMessage parseSchema( Buffer& buffer, int64_t access_token) {
+    auto bufferedData = MakeRequest(interpreter::MessageType_LoadCsvSchema,  // here I am using LoadCsvSchema but this funcion now is for parsing either CSV or Parquet
                                      access_token,
                                      buffer
                                      );
@@ -96,26 +59,10 @@ public:
       ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
       throw std::runtime_error(errorMessage.getMessage());
     }
-    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload.getBufferData();
+    CreateTableResponseMessage responsePayload(response.getPayloadBuffer());
+    return responsePayload;
   }
 
-  std::shared_ptr<flatbuffers::DetachedBuffer> loadParquetSchema( Buffer& buffer, int64_t access_token) {
-    auto bufferedData = MakeRequest(interpreter::MessageType_LoadParquetSchema,
-                                     access_token,
-                                     buffer
-                                     );
-
-    Buffer responseBuffer = client.send(bufferedData);
-    ResponseMessage response{responseBuffer.data()};
-
-    if (response.getStatus() == Status_Error) {
-      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-      throw std::runtime_error(errorMessage.getMessage());
-    }
-    ExecutePlanResponseMessage responsePayload(response.getPayloadBuffer());
-    return responsePayload.getBufferData();
-  }
 
   std::vector<::gdf_dto::gdf_column> getResult(uint64_t resultToken, int64_t access_token){
     interpreter::GetResultRequestMessage payload{resultToken};
