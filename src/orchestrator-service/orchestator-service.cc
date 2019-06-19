@@ -579,7 +579,6 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
     add_table(payload,temp_schema,existed);
 
    try {
-    calcite::CalciteClient calcite_client(calciteConnectionAddress);
 
     if(existed){
 
@@ -587,7 +586,8 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
           drop_request.name = payload.name;
           drop_request.dbName = "main";
 
-          auto status = calcite_client.dropTable(  drop_request);
+          calcite::CalciteClient calcite_client_drop_table(calciteConnectionAddress);
+          auto status = calcite_client_drop_table.dropTable(  drop_request);
 
       }
 
@@ -596,7 +596,8 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
     for (auto col : payload.columnNames)
       std::cout << "\ntable.column:" << col << std::endl;
 
-    auto status = calcite_client.createTable(  payload );
+    calcite::CalciteClient calcite_client_create_table(calciteConnectionAddress);
+    auto status = calcite_client_create_table.createTable(  payload );
   } catch (std::runtime_error &error) {
      // error with ddl query
     std::cout << "In function ddlCreateTableService: " << error.what() << std::endl;
