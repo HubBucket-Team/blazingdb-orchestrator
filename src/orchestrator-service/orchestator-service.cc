@@ -34,6 +34,12 @@ std::string globalRalPort;
 using namespace blazingdb::protocol;
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 
+static std::string getRalConnectionAddress(std::shared_ptr<blazingdb::communication::Node> node) {
+    const std::string connectionAddress = "/tmp/ral." + std::to_string(node->unixSocketId()) + ".socket";
+    
+    return connectionAddress;
+}
+
 static result_pair registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   using namespace blazingdb::communication;
   
@@ -46,7 +52,7 @@ static result_pair registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
     for (std::size_t index = 0; index < cluster.size(); ++index) {
         futures.emplace_back(std::async(std::launch::async, [&, index]() {
             try {
-                interpreter::InterpreterClient ral_client("/tmp/ral." + std::to_string(cluster[index]->unixSocketId()) + ".socket");
+                interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
                 auto response = ral_client.registerFileSystem(accessToken, buffer);
                 
                 if (response == Status_Error) {                
@@ -106,7 +112,7 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
     for (std::size_t index = 0; index < cluster.size(); ++index) {
         futures.emplace_back(std::async(std::launch::async, [&, index]() {
             try {
-                interpreter::InterpreterClient ral_client("/tmp/ral." + std::to_string(cluster[index]->unixSocketId()) + ".socket");
+                interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
                 blazingdb::message::io::FileSystemDeregisterRequestMessage message(buffer.data());
                 auto response = ral_client.deregisterFileSystem(accessToken, message.getAuthority());
                 
@@ -176,7 +182,7 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)
     for (std::size_t index = 0; index < cluster.size(); ++index) {
         futures.emplace_back(std::async(std::launch::async, [&, index]() {
             try {
-                interpreter::InterpreterClient ral_client("/tmp/ral." + std::to_string(cluster[index]->unixSocketId()) + ".socket");
+                interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
                 auto status = ral_client.closeConnection(accessToken);
                 std::cout << "status close conneciton for RAL: " << std::to_string(index) << ": " << status << std::endl;
                 
@@ -333,7 +339,7 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
     for (std::size_t index = 0; index < cluster.size(); ++index) {
         futures.emplace_back(std::async(std::launch::async, [&, index]() {
             try {
-                interpreter::InterpreterClient ral_client("/tmp/ral." + std::to_string(cluster[index]->unixSocketId()) + ".socket");
+                interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
 
                 auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan,
                                                                                  tableSchemas[index],
@@ -466,7 +472,7 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
             Context* context = manager.generateContext(std::to_string(accessToken), 99);
             std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
             
-            interpreter::InterpreterClient ral_client("/tmp/ral." + std::to_string(cluster[0]->unixSocketId()) + ".socket");
+            interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[0]));
     		auto ral_response = ral_client.parseSchema(buffer,accessToken);
     		payload.columnNames = ral_response.getTableSchema().names;
     		/*typedef enum {
