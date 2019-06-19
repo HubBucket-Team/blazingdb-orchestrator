@@ -77,17 +77,34 @@ static void setupTCPConnections(
 
 #endif
 
-static std::string getRalConnectionAddress(std::shared_ptr<blazingdb::communication::Node> node) {
-    const std::string connectionAddress = "/tmp/ral." + std::to_string(node->unixSocketId()) + ".socket";
-    
+#ifdef USE_UNIX_SOCKETS
+
+static ConnectionAddress getRalConnectionAddress(std::shared_ptr<blazingdb::communication::Node> node) {
+    const std::string conn = "/tmp/ral." + std::to_string(node->unixSocketId()) + ".socket";
+    ConnectionAddress connectionAddress;
+    connectionAddress.unix_socket_path = unix_socket_path;
     return connectionAddress;
 }
+                
+#else
+
+static ConnectionAddress getRalConnectionAddress(std::shared_ptr<blazingdb::communication::Node> node) {
+    const blazingdb::communication::internal::ConcreteAddress *concreteAddress = static_cast<const blazingdb::communication::internal::ConcreteAddress *>(node->address());
+    const std::string host = concreteAddress->ip();
+    const int port = concreteAddress->protocol_port();
+    ConnectionAddress connectionAddress;
+    connectionAddress.tcp_host = host;
+    connectionAddress.tcp_port = port;
+    return connectionAddress;
+}
+
+#endif
 
 static result_pair registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   using namespace blazingdb::communication;
   
   try {
-    auto& manager = Communication::Manager();
+    auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
     Context* context = manager.generateContext(std::to_string(accessToken), 99);
     std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
     
@@ -147,7 +164,7 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
   using namespace blazingdb::communication;
 
   try {
-    auto& manager = Communication::Manager();
+    auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
     Context* context = manager.generateContext(std::to_string(accessToken), 99);
     std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
     
@@ -220,7 +237,7 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)
   using namespace blazingdb::communication;
 
   try {
-    auto& manager = Communication::Manager();
+    auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
     Context* context = manager.generateContext(std::to_string(accessToken), 99);
     std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
     
@@ -385,26 +402,6 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
     for (std::size_t index = 0; index < cluster.size(); ++index) {
         futures.emplace_back(std::async(std::launch::async, [&, index]() {
             try {
-
-                auto node = cluster[index];
-
-#ifdef USE_UNIX_SOCKETS
-
-                const std::string unix_socket_path = "/tmp/ral." + std::to_string(node->unixSocketId()) + ".socket";
-                ConnectionAddress connectionAddress;
-                connectionAddress.unix_socket_path = unix_socket_path;
-
-#else
-
-                const internal::ConcreteAddress *concreteAddress = static_cast<const internal::ConcreteAddress *>(node->address());
-                const std::string host = concreteAddress->ip();
-                const int port = concreteAddress->protocol_port();
-                ConnectionAddress connectionAddress;
-                connectionAddress.tcp_host = host;
-                connectionAddress.tcp_port = port;
-
-#endif
-
                 interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
 
                 auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan,
@@ -534,7 +531,7 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
     	if(payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET ||
     			payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
             
-            auto& manager = Communication::Manager();
+            auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
             Context* context = manager.generateContext(std::to_string(accessToken), 99);
             std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
             
