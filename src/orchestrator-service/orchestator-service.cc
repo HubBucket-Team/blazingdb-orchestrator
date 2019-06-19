@@ -12,14 +12,6 @@
 #include <blazingdb/communication/Buffer.h>
 #include <blazingdb/communication/Address-Internal.h>
 
-
-// TODO: remove global
-std::string globalOrchestratorPort;
-std::string globalCalciteIphost;
-std::string globalCalcitePort;
-std::string globalRalIphost;
-std::string globalRalPort;
-
 #include "ral-client.h"
 #include "calcite-client.h"
 
