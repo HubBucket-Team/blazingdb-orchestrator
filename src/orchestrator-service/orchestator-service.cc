@@ -35,7 +35,6 @@ std::string globalRalPort;
 using namespace blazingdb::protocol;
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 
-
 ConnectionAddress calciteConnectionAddress;
 ConnectionAddress ralConnectionAddress;
 int orchestratorCommunicationTcpPort;
@@ -78,11 +77,61 @@ static void setupTCPConnections(
 
 #endif
 
-static result_pair registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
-  try {
-    interpreter::InterpreterClient ral_client(ralConnectionAddress);
-    auto response = ral_client.registerFileSystem(accessToken, buffer);
+static std::string getRalConnectionAddress(std::shared_ptr<blazingdb::communication::Node> node) {
+    const std::string connectionAddress = "/tmp/ral." + std::to_string(node->unixSocketId()) + ".socket";
+    
+    return connectionAddress;
+}
 
+static result_pair registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
+  using namespace blazingdb::communication;
+  
+  try {
+    auto& manager = Communication::Manager();
+    Context* context = manager.generateContext(std::to_string(accessToken), 99);
+    std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
+    
+    std::vector<std::future<result_pair>> futures;
+    for (std::size_t index = 0; index < cluster.size(); ++index) {
+        futures.emplace_back(std::async(std::launch::async, [&, index]() {
+            try {
+                interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
+                auto response = ral_client.registerFileSystem(accessToken, buffer);
+                
+                if (response == Status_Error) {                
+                    std::cout << "In function registerFileSystem for RAL: " << std::to_string(index) << std::endl;
+                    std::string stringErrorMessage = "Cannot register the filesystem for RAL: " + std::to_string(index);
+                    ResponseErrorMessage errorMessage{ stringErrorMessage };
+                    return std::make_pair(Status_Error, errorMessage.getBufferData());
+                }
+                
+                ZeroMessage ok_response{};
+                return std::make_pair(Status_Success, ok_response.getBufferData());
+            }
+            catch (std::runtime_error &error) {
+                // error with query plan: not resultToken
+                std::cout << "In function registerFileSystem: " << error.what() << std::endl;
+                std::string stringErrorMessage = "Cannot register the filesystem: " + std::string(error.what());
+                ResponseErrorMessage errorMessage{ stringErrorMessage };
+                return std::make_pair(Status_Error, errorMessage.getBufferData());
+            }
+        }));
+    }
+
+    bool isGood = true;
+    result_pair error_message{};
+
+    for (auto& future : futures) {
+        auto response = future.get();
+        if (response.first != Status::Status_Success) {
+            isGood = false;
+            error_message = response;
+        }
+    }
+    
+    if (isGood == false) {
+        return error_message;
+    }
   } catch (std::runtime_error &error) {
     // error with query plan: not resultToken
     std::cout << "In function registerFileSystem: " << error.what() << std::endl;
@@ -95,17 +144,61 @@ static result_pair registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
 }
 
 static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  {
-  try {
-    interpreter::InterpreterClient ral_client(ralConnectionAddress);
-    blazingdb::message::io::FileSystemDeregisterRequestMessage message(buffer.data());
-    auto response = ral_client.deregisterFileSystem(accessToken, message.getAuthority());
+  using namespace blazingdb::communication;
 
+  try {
+    auto& manager = Communication::Manager();
+    Context* context = manager.generateContext(std::to_string(accessToken), 99);
+    std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
+    
+    std::vector<std::future<result_pair>> futures;
+    for (std::size_t index = 0; index < cluster.size(); ++index) {
+        futures.emplace_back(std::async(std::launch::async, [&, index]() {
+            try {
+                interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
+                blazingdb::message::io::FileSystemDeregisterRequestMessage message(buffer.data());
+                auto response = ral_client.deregisterFileSystem(accessToken, message.getAuthority());
+                
+                if (response == Status_Error) {                
+                    std::cout << "In function deregisterFileSystem for RAL: " << std::to_string(index) << std::endl;
+                    std::string stringErrorMessage = "Cannot deregister the filesystem for RAL: " + std::to_string(index);
+                    ResponseErrorMessage errorMessage{ stringErrorMessage };
+                    return std::make_pair(Status_Error, errorMessage.getBufferData());
+                }
+                
+                ZeroMessage ok_response{};
+                return std::make_pair(Status_Success, ok_response.getBufferData());
+            }
+            catch (std::runtime_error &error) {
+                // error with query plan: not resultToken
+                std::cout << "In function deregisterFileSystem: " << error.what() << std::endl;
+                std::string stringErrorMessage = "Cannot deregister the filesystem: " + std::string(error.what());
+                ResponseErrorMessage errorMessage{ stringErrorMessage };
+                return std::make_pair(Status_Error, errorMessage.getBufferData());
+            }
+        }));
+    }
+
+    bool isGood = true;
+    result_pair error_message{};
+
+    for (auto& future : futures) {
+        auto response = future.get();
+        if (response.first != Status::Status_Success) {
+            isGood = false;
+            error_message = response;
+        }
+    }
+    
+    if (isGood == false) {
+        return error_message;
+    }
   } catch (std::runtime_error &error) {
-    // error with query plan: not resultToken
-    std::cout << "In function deregisterFileSystem: " << error.what() << std::endl;
-    std::string stringErrorMessage = "Cannot deregister the filesystem: " + std::string(error.what());
-    ResponseErrorMessage errorMessage{ stringErrorMessage };
-    return std::make_pair(Status_Error, errorMessage.getBufferData());
+      // error with query plan: not resultToken
+      std::cout << "In function deregisterFileSystem: " << error.what() << std::endl;
+      std::string stringErrorMessage = "Cannot deregister the filesystem: " + std::string(error.what());
+      ResponseErrorMessage errorMessage{ stringErrorMessage };
+      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
@@ -124,15 +217,59 @@ static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buff
 
 
 static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)  {
+  using namespace blazingdb::communication;
+
   try {
-    interpreter::InterpreterClient ral_client(ralConnectionAddress);
-    auto status = ral_client.closeConnection(accessToken);
-    std::cout << "status:" << status << std::endl;
+    auto& manager = Communication::Manager();
+    Context* context = manager.generateContext(std::to_string(accessToken), 99);
+    std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
+    
+    std::vector<std::future<result_pair>> futures;
+    for (std::size_t index = 0; index < cluster.size(); ++index) {
+        futures.emplace_back(std::async(std::launch::async, [&, index]() {
+            try {
+                interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
+                auto status = ral_client.closeConnection(accessToken);
+                std::cout << "status close conneciton for RAL: " << std::to_string(index) << ": " << status << std::endl;
+                
+                if (status == Status_Error) {                
+                    std::cout << "In function closeConnectionService for RAL: " << std::to_string(index) << std::endl;
+                    std::string stringErrorMessage = "Cannot close the connection for RAL: " + std::to_string(index);
+                    ResponseErrorMessage errorMessage{ stringErrorMessage };
+                    return std::make_pair(Status_Error, errorMessage.getBufferData());
+                }
+                
+                ZeroMessage ok_response{};
+                return std::make_pair(Status_Success, ok_response.getBufferData());
+            }
+            catch (std::runtime_error &error) {
+                std::cout << "In function closeConnectionService: " << error.what() << std::endl;
+                std::string stringErrorMessage = "Cannot close the connection: " + std::string(error.what());
+                ResponseErrorMessage errorMessage{ stringErrorMessage };
+                return std::make_pair(Status_Error, errorMessage.getBufferData());
+            }
+        }));
+    }
+
+    bool isGood = true;
+    result_pair error_message{};
+
+    for (auto& future : futures) {
+        auto response = future.get();
+        if (response.first != Status::Status_Success) {
+            isGood = false;
+            error_message = response;
+        }
+    }
+    
+    if (isGood == false) {
+        return error_message;
+    }
   } catch (std::runtime_error &error) {
-    std::cout << "In function closeConnectionService: " << error.what() << std::endl;
-    std::string stringErrorMessage = "Cannot close the connection: " + std::string(error.what());
-    ResponseErrorMessage errorMessage{ stringErrorMessage };
-    return std::make_pair(Status_Error, errorMessage.getBufferData());
+      std::cout << "In function closeConnectionService: " << error.what() << std::endl;
+      std::string stringErrorMessage = "Cannot close the connection: " + std::string(error.what());
+      ResponseErrorMessage errorMessage{ stringErrorMessage };
+      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
@@ -268,7 +405,7 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
 
 #endif
 
-                interpreter::InterpreterClient ral_client(connectionAddress);
+                interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
 
                 auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan,
                                                                                  tableSchemas[index],
@@ -387,7 +524,8 @@ int convert_string_dtype(std::string str){
 }
 
 static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer)  {
-
+    using namespace blazingdb::communication;
+    
     orchestrator::DDLCreateTableRequestMessage payload(buffer.data());
 	std::cout << "###DDL Create Table: " << std::endl;
 	blazingdb::protocol::TableSchemaSTL temp_schema;
@@ -395,7 +533,12 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
     try{
     	if(payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET ||
     			payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
-    	    interpreter::InterpreterClient ral_client;
+            
+            auto& manager = Communication::Manager();
+            Context* context = manager.generateContext(std::to_string(accessToken), 99);
+            std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
+            
+            interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[0]));
     		auto ral_response = ral_client.parseSchema(buffer,accessToken);
     		payload.columnNames = ral_response.getTableSchema().names;
     		/*typedef enum {
