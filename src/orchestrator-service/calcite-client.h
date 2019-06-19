@@ -69,10 +69,6 @@ public:
 
       Buffer responseBuffer = client.send(bufferedData);
 
-
-      std::cout << "luegosendAAAAAAAAAAAAAAAAAAAAAAAAAAAA " << std::endl;
-
-
       if (responseBuffer.size() == 0) {
         throw std::runtime_error("Orchestrattor::DropTable failed! responseBuffer from calcite is zero");
       }
