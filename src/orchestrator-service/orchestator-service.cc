@@ -189,10 +189,14 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
           // Assign the files to each schema
           auto itBegin = tables.tables[k].tableSchema.files.begin();
           auto itEnd = tables.tables[k].tableSchema.files.end();
-          for (int j = 0; j < cluster.size() && itBegin != itEnd; ++j) {
-              std::ptrdiff_t offset = std::min((std::ptrdiff_t)quantity, std::distance(itBegin, itEnd));
-              tableSchemas[j].tables[k].tableSchema.files.assign(itBegin, itBegin + offset);
-              itBegin += offset;
+          for (int j = 0; j < cluster.size(); ++j) {
+              if (itBegin != itEnd){
+                std::ptrdiff_t offset = std::min((std::ptrdiff_t)quantity, std::distance(itBegin, itEnd));
+                tableSchemas[j].tables[k].tableSchema.files.assign(itBegin, itBegin + offset);
+                itBegin += offset;
+              } else { // no more files to assign
+                tableSchemas[j].tables[k].tableSchema.files.resize(0);
+              }
           }
         }
     }
