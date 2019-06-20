@@ -40,6 +40,12 @@ include(ConfigureRapidJSON)
 find_package(Threads)
 
 # BEGIN MAIN #
+
+# TODO percy move this to tool-chain and add support for cuda def and more than 1 defs
+add_definitions(${CXX_DEFINES})
+get_directory_property(CXX_COMPILE_DEFINITIONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
+message(STATUS "C++ compiler definitions: ${CXX_COMPILE_DEFINITIONS}")
+
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
     ${RAPIDJSON_INCLUDE_DIRS}

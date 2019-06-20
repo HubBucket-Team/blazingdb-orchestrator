@@ -10,14 +10,7 @@
 #include "blazingdb-communication.hpp"
 #include <blazingdb/communication/Context.h>
 #include <blazingdb/communication/Buffer.h>
-
-
-// TODO: remove global
-std::string globalOrchestratorPort;
-std::string globalCalciteIphost;
-std::string globalCalcitePort;
-std::string globalRalIphost;
-std::string globalRalPort;
+#include <blazingdb/communication/Address-Internal.h>
 
 #include "ral-client.h"
 #include "calcite-client.h"
@@ -34,17 +27,76 @@ std::string globalRalPort;
 using namespace blazingdb::protocol;
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 
-static std::string getRalConnectionAddress(std::shared_ptr<blazingdb::communication::Node> node) {
-    const std::string connectionAddress = "/tmp/ral." + std::to_string(node->unixSocketId()) + ".socket";
-    
+ConnectionAddress calciteConnectionAddress;
+ConnectionAddress ralConnectionAddress;
+int orchestratorCommunicationTcpPort;
+
+#ifdef USE_UNIX_SOCKETS
+
+static void setupUnixSocketConnections(
+        int orchestrator_communication_tcp_port = 9000,
+        const std::string orchestrator_unix_socket_path = "/tmp/orchestrator.socket",
+        const std::string calcite_unix_socket_path = "/tmp/calcite.socket",
+        const std::string ral_unix_socket_path = "/tmp/ral.1.socket") {
+
+  orchestratorConnectionAddress.unix_socket_path = orchestrator_unix_socket_path;
+  calciteConnectionAddress.unix_socket_path = calcite_unix_socket_path;
+  ralConnectionAddress.unix_socket_path = ral_unix_socket_path;
+  
+  orchestratorCommunicationTcpPort = orchestrator_communication_tcp_port;
+}
+
+#else
+
+static void setupTCPConnections(
+    int orchestrator_communication_tcp_port,
+    int orchestrator_protocol_tcp_port,
+    const std::string &calcite_tcp_host,
+    int calcite_tcp_port) {
+
+  //TODO percy refactor this until table scan is ready in distribution
+  const std::string ral_tcp_host = "127.0.0.1";
+  const int ral_tcp_port = 8891;
+
+  calciteConnectionAddress.tcp_host = calcite_tcp_host;
+  calciteConnectionAddress.tcp_port = calcite_tcp_port;
+
+  ralConnectionAddress.tcp_host = ral_tcp_host;
+  ralConnectionAddress.tcp_port = ral_tcp_port;
+
+  orchestratorCommunicationTcpPort = orchestrator_communication_tcp_port;
+}
+
+#endif
+
+#ifdef USE_UNIX_SOCKETS
+
+static ConnectionAddress getRalConnectionAddress(std::shared_ptr<blazingdb::communication::Node> node) {
+    const std::string conn = "/tmp/ral." + std::to_string(node->unixSocketId()) + ".socket";
+    ConnectionAddress connectionAddress;
+    connectionAddress.unix_socket_path = unix_socket_path;
     return connectionAddress;
 }
+                
+#else
+
+static ConnectionAddress getRalConnectionAddress(std::shared_ptr<blazingdb::communication::Node> node) {
+    const blazingdb::communication::internal::ConcreteAddress *concreteAddress = static_cast<const blazingdb::communication::internal::ConcreteAddress *>(node->address());
+    const std::string host = concreteAddress->ip();
+    const int port = concreteAddress->protocol_port();
+    ConnectionAddress connectionAddress;
+    connectionAddress.tcp_host = host;
+    connectionAddress.tcp_port = port;
+    return connectionAddress;
+}
+
+#endif
 
 static result_pair registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   using namespace blazingdb::communication;
   
   try {
-    auto& manager = Communication::Manager();
+    auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
     Context* context = manager.generateContext(std::to_string(accessToken), 99);
     std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
     
@@ -104,7 +156,7 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
   using namespace blazingdb::communication;
 
   try {
-    auto& manager = Communication::Manager();
+    auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
     Context* context = manager.generateContext(std::to_string(accessToken), 99);
     std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
     
@@ -161,6 +213,9 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
+
+
+
 static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buffer)  {
   srand(time(0));
   int64_t token = rand();
@@ -174,7 +229,7 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)
   using namespace blazingdb::communication;
 
   try {
-    auto& manager = Communication::Manager();
+    auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
     Context* context = manager.generateContext(std::to_string(accessToken), 99);
     std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
     
@@ -287,7 +342,7 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
   std::cout << "##DML-FS: " << query << std::endl;
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
 
-  auto& manager = Communication::Manager();
+  auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
   Context* context = manager.generateContext(query, 99);
   std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
   std::vector<FileSystemTableGroupSchema> tableSchemas;
@@ -305,7 +360,7 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
 
 
   try {
-    calcite::CalciteClient calcite_client;
+    calcite::CalciteClient calcite_client(calciteConnectionAddress);
     auto response = calcite_client.runQuery(query);
     auto logicalPlan = response.getLogicalPlan();
     auto time = response.getTime();
@@ -327,10 +382,14 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
           // Assign the files to each schema
           auto itBegin = tables.tables[k].tableSchema.files.begin();
           auto itEnd = tables.tables[k].tableSchema.files.end();
-          for (int j = 0; j < cluster.size() && itBegin != itEnd; ++j) {
-              std::ptrdiff_t offset = std::min((std::ptrdiff_t)quantity, std::distance(itBegin, itEnd));
-              tableSchemas[j].tables[k].tableSchema.files.assign(itBegin, itBegin + offset);
-              itBegin += offset;
+          for (int j = 0; j < cluster.size(); ++j) {
+              if (itBegin != itEnd){
+                std::ptrdiff_t offset = std::min((std::ptrdiff_t)quantity, std::distance(itBegin, itEnd));
+                tableSchemas[j].tables[k].tableSchema.files.assign(itBegin, itBegin + offset);
+                itBegin += offset;
+              } else { // no more files to assign
+                tableSchemas[j].tables[k].tableSchema.files.resize(0);
+              }
           }
         }
     }
@@ -468,7 +527,7 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
     	if(payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET ||
     			payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
             
-            auto& manager = Communication::Manager();
+            auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
             Context* context = manager.generateContext(std::to_string(accessToken), 99);
             std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
             
@@ -524,7 +583,6 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
     add_table(payload,temp_schema,existed);
 
    try {
-    calcite::CalciteClient calcite_client;
 
     if(existed){
 
@@ -532,7 +590,8 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
           drop_request.name = payload.name;
           drop_request.dbName = "main";
 
-          auto status = calcite_client.dropTable(  drop_request);
+          calcite::CalciteClient calcite_client_drop_table(calciteConnectionAddress);
+          auto status = calcite_client_drop_table.dropTable(  drop_request);
 
       }
 
@@ -541,7 +600,8 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
     for (auto col : payload.columnNames)
       std::cout << "\ntable.column:" << col << std::endl;
 
-    auto status = calcite_client.createTable(  payload );
+    calcite::CalciteClient calcite_client_create_table(calciteConnectionAddress);
+    auto status = calcite_client_create_table.createTable(  payload );
   } catch (std::runtime_error &error) {
      // error with ddl query
     std::cout << "In function ddlCreateTableService: " << error.what() << std::endl;
@@ -557,9 +617,10 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
 
 static result_pair ddlDropTableService(uint64_t accessToken, Buffer&& buffer)  {
   std::cout << "##DDL Drop Table: " << std::endl;
+  //std::cout << "##DEBUG calcite connection address: " << calciteConnectionAddress << std::endl;
 
   try {
-    calcite::CalciteClient calcite_client;
+    calcite::CalciteClient calcite_client(calciteConnectionAddress);
 
     orchestrator::DDLDropTableRequestMessage payload(buffer.data());
     std::cout << "cbname:" << payload.dbName << std::endl;
@@ -584,33 +645,79 @@ static std::map<int8_t, FunctionType> services;
 auto orchestratorService(const blazingdb::protocol::Buffer &requestBuffer) -> blazingdb::protocol::Buffer {
   RequestMessage request{requestBuffer.data()};
   std::cout << "header: " << (int)request.messageType() << std::endl;
-
-  auto result = services[request.messageType()] ( request.accessToken(),  request.getPayloadBuffer() );
+ 
+  auto result = services[request.messageType()] (request.accessToken(),  request.getPayloadBuffer() );
   ResponseMessage responseObject{result.first, result.second};
   return Buffer{responseObject.getBufferData()};
 };
 
 int
 main(int argc, const char *argv[]) {
-//  if (6 != argc) {
-//    std::cout << "usage: " << argv[0]
-//              << " <ORCHESTRATOR_PORT> <CALCITE_[IP|HOSTNAME]> <CALCITE_PORT> "
-//                 "<RAL_[IP|HOSTNAME]> <RAL_PORT>"
-//              << std::endl;
-//    return 1;
-//  }
-//    globalOrchestratorPort = argv[1];
-//    globalCalciteIphost    = argv[2];
-//    globalCalcitePort      = argv[3];
-//    globalRalIphost        = argv[4];
-//    globalRalPort          = argv[5];
 
-  Communication::InitializeManager();
+#ifdef USE_UNIX_SOCKETS
+
+  std::cout << "usage: " << argv[0] << " <ORCHESTRATOR_COMMUNICATION_TCP_PORT>" << std::endl;
+
+  if (argc == 2) {
+    const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[1]);
+    
+    if (orchestratorCommunicationPort == -1) {
+      std::cout << "FATAL: Invalid Orchestrator TCP ports " + std::string(argv[1]) + " " + std::string(argv[1]) << std::endl;
+      return EXIT_FAILURE;
+    }
+    
+    setupUnixSocketConnections(orchestratorCommunicationPort);
+  } else {
+    // when the user doesnt enter any args
+    setupUnixSocketConnections();
+  }
+
+  blazingdb::protocol::UnixSocketConnection orchestratorConnection(orchestratorConnectionAddress);
+
+  std::cout << "orchestrator unix socket path: " << orchestratorConnectionAddress.unix_socket_path << std::endl;
+  std::cout << "calcite unix socket path: " << calciteConnectionAddress.unix_socket_path << std::endl;
+  std::cout << "ral unix socket path: " << ralConnectionAddress.unix_socket_path << std::endl;
+  
+#else
+
+  std::cout << "usage: " << argv[0] << " <ORCHESTRATOR_HTTP_COMMUNICATION_PORT> <ORCHESTRATOR_TCP_PROTOCOL_PORT> <CALCITE_TCP_PROTOCOL_[IP|HOSTNAME]> <CALCITE_TCP_PROTOCOL_PORT>" << std::endl;
+
+  if (argc != 5) {
+      std::cout << "FATAL: Invalid number of arguments" << std::endl;
+      return EXIT_FAILURE;
+  }
+
+  const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[1]);  
+  const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[2]);
+  
+  if (orchestratorProtocolPort == -1 || orchestratorCommunicationPort == -1) {
+      std::cout << "FATAL: Invalid Orchestrator TCP ports " + std::string(argv[1]) + " " + std::string(argv[2]) << std::endl;
+      return EXIT_FAILURE;
+  }
+  
+  const std::string calciteHost = argv[3];
+  const int calcitePort = ConnectionUtils::parsePort(argv[4]);
+  
+  if (calcitePort == -1) {
+      std::cout << "FATAL: Invalid Calcite TCP port " + std::string(argv[4]) << std::endl;
+      return EXIT_FAILURE;
+  }
+  
+  setupTCPConnections(orchestratorCommunicationPort, orchestratorProtocolPort, calciteHost, calcitePort);
+
+  std::cout << "Orchestrator HTTP communication port: " << orchestratorCommunicationTcpPort << std::endl;
+  std::cout << "Orchestrator TCP protocol port: " << orchestratorProtocolPort << std::endl;
+  std::cout << "Calcite TCP protocol host: " << calciteConnectionAddress.tcp_host << std::endl;
+  std::cout << "Calcite TCP protocol port: " << calciteConnectionAddress.tcp_port << std::endl;
+
+#endif
+
+  Communication::InitializeManager(orchestratorCommunicationTcpPort);
+  std::cout << "Communication manager is listening on port: " << orchestratorCommunicationTcpPort << std::endl;
 
   std::cout << "Orchestrator is listening" << std::endl;
 
-  blazingdb::protocol::UnixSocketConnection connection("/tmp/orchestrator.socket");
-  blazingdb::protocol::Server server(connection);
+  blazingdb::protocol::Server server(orchestratorProtocolPort);
 
   services.insert(std::make_pair(orchestrator::MessageType_DML_FS, &dmlFileSystemService));
 
@@ -625,7 +732,7 @@ main(int argc, const char *argv[]) {
 
   server.handle(&orchestratorService);
 
-  Communication::FinalizeManager();
+  Communication::FinalizeManager(orchestratorCommunicationTcpPort);
 
   return 0;
 }
