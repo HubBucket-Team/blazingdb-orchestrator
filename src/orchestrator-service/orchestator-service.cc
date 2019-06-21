@@ -125,12 +125,38 @@ void remove_table(std::string name){
 	}
 }
 
+std::vector<std::string> get_table_names(const std::string& query) {
+  std::vector<std::string> response;
+  int pos = 0;
+  do {
+    pos = query.find("main.", pos + 1);
+    if (pos == std::string::npos)
+      break;
+    auto next_pos = query.find(" ", pos + 1);
+    auto table_name = query.substr(pos, next_pos == std::string::npos? query.length() - 1 : next_pos);
+    response.emplace_back(table_name);
+  } while (pos < query.length());
+  return response;
+}
 
 static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) {
   blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
   auto query = requestPayload.statement;
   std::cout << "##DML-FS: " << query << std::endl;
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
+  auto table_names = get_table_names(query);
+  bool is_contained = false;
+  for(auto & table : tables.tables) {
+    auto iter = std::find(table_names.begin(), table_names.end(), table.name);
+    if (iter != table_names.end()) {
+      is_contained = true;
+    }
+  }
+  if (!is_contained) {
+    std::string stringErrorMessage = "Error on the query: " + query + ". The table names used in this query is not registered.";
+    ResponseErrorMessage errorMessage{ stringErrorMessage };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
 
   try {
     calcite::CalciteClient calcite_client;
@@ -142,9 +168,7 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
     try {
       interpreter::InterpreterClient ral_client;
 
-      requestPayload.tableGroup = tables;
-
-
+      requestPayload.tableGroup = tables; 
 
       auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan, requestPayload.tableGroup, accessToken);
 
