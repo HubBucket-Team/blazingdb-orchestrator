@@ -3,6 +3,7 @@
 #include <tuple>
 #include <blazingdb/protocol/api.h>
 #include <mutex>
+#include <regex>
 
 // TODO: remove global
 std::string globalOrchestratorPort;
@@ -125,50 +126,99 @@ void remove_table(std::string name){
 	}
 }
 
-std::vector<std::string> get_table_names(const std::string& query) {
+std::vector<std::string> split(std::string input, std::string regex) {
+  // passing -1 as the submatch index parameter performs splitting
+  size_t pos = 0;
+  std::vector<std::string> result;
+  while ((pos = input.find(regex)) != std::string::npos) {
+    std::string token;
+    token = input.substr(0, pos);
+    result.push_back(token);
+    //  std::cout << token << std::endl;
+    input.erase(0, pos + regex.length());
+  }
+  result.push_back(input);
+  return result;
+  //std::cout << s << std::endl;
+
+}
+
+//DORU_TESTING
+std::vector<std::string>  split(std::string &s, char delim) {
+  std::vector<std::string> elems;
+  std::stringstream ss(s);
+  std::string item;
+  while (std::getline(ss, item, delim)) {
+    if (!(item.size() == 1 && item[0] == delim)){
+      elems.push_back(item);
+    }
+  }
+  if(s[s.size()-1] == delim){
+    elems.push_back("");
+  }
+  return elems;
+}
+
+
+std::vector<std::string> get_table_names_from_plan(const std::string& plan) {
   std::vector<std::string> response;
-  int pos = 0;
-  do {
-    pos = query.find("main.", pos + 1);
-    if (pos == std::string::npos)
-      break;
-    auto next_pos = query.find(" ", pos + 1);
-    auto table_name = query.substr(pos, next_pos == std::string::npos? query.length() - 1 : next_pos);
-    response.emplace_back(table_name);
-  } while (pos < query.length());
+  auto pos = plan.find("LogicalTableScan");
+  if (pos != std::string::npos) {
+    auto str_tmp = plan.substr(pos);
+    auto lines = split(str_tmp, '\n');
+    std::smatch match;
+    std::regex re {R""(table=\[(\W\(.+?\)|.+)\])""};
+    for (auto& str : lines) {
+      if( std::regex_search(str, match, re) ) {
+        auto table_str = match[1].str();
+        pos = table_str.find(", ");
+        auto end_pos = table_str.find("]");
+        if (pos != std::string::npos && end_pos != std::string::npos) {
+          auto length = end_pos - pos - 2;
+          //std::cout << length << " found:"  <<  table_str.substr(pos+2, length)  << '\n';
+          response.push_back(table_str.substr(pos+2, length));
+        }
+      }
+    }
+  }
   return response;
 }
+
 
 static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) {
   blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
   auto query = requestPayload.statement;
   std::cout << "##DML-FS: " << query << std::endl;
   std::shared_ptr<flatbuffers::DetachedBuffer> resultBuffer;
-  auto table_names = get_table_names(query);
-  bool is_contained = false;
-  for(auto & table : tables.tables) {
-    auto iter = std::find(table_names.begin(), table_names.end(), table.name);
-    if (iter != table_names.end()) {
-      is_contained = true;
-    }
-  }
-  if (!is_contained) {
-    std::string stringErrorMessage = "Error on the query: " + query + ". The table names used in this query is not registered.";
-    ResponseErrorMessage errorMessage{ stringErrorMessage };
-    return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
 
   try {
     calcite::CalciteClient calcite_client;
     auto response = calcite_client.runQuery(query);
     auto logicalPlan = response.getLogicalPlan();
+
+    auto table_names = get_table_names_from_plan(logicalPlan);
+    bool is_not_contained = false;
+    blazingdb::message::io::FileSystemTableGroupSchema query_tables;
+
+    for(auto & table : tables.tables) {
+      auto iter = std::find(table_names.begin(), table_names.end(), table.name);
+      if (iter == table_names.end()) {
+        is_not_contained = true;
+      } else { // found
+        query_tables.tables.push_back(table);
+      }
+    }
+//    if (is_not_contained) {
+//      std::string stringErrorMessage = "Error on the query: " + query + ". The table names used in this query is not registered.";
+//      ResponseErrorMessage errorMessage{ stringErrorMessage };
+//      return std::make_pair(Status_Error, errorMessage.getBufferData());
+//    }
     auto time = response.getTime();
     std::cout << "plan:" << logicalPlan << std::endl;
     std::cout << "time:" << time << std::endl;
     try {
       interpreter::InterpreterClient ral_client;
-
-      requestPayload.tableGroup = tables; 
+      requestPayload.tableGroup = tables;
 
       auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan, requestPayload.tableGroup, accessToken);
 
@@ -210,8 +260,8 @@ std::string convert_dtype_string(int dtype){
 			return "GDF_FLOAT32";
 	case 6:
 			return "GDF_FLOAT64";
-  case 7:
-      return "GDF_BOOL8";
+    case 7:
+            return "GDF_BOOL8";
 	case 8:
 			return "GDF_DATE32";
 	case 9:
