@@ -64,7 +64,7 @@ public:
   }
 
 
-  std::vector<::gdf_dto::gdf_column> getResult(uint64_t resultToken, int64_t access_token){
+  interpreter::GetResultResponseMessage getResult(uint64_t resultToken, int64_t access_token){
     interpreter::GetResultRequestMessage payload{resultToken};
     auto bufferedData = MakeRequest(interpreter::MessageType_GetResult,
                                      access_token,
@@ -82,7 +82,7 @@ public:
     interpreter::GetResultResponseMessage responsePayload(response.getPayloadBuffer());
     std::cout << "getValues: " << responsePayload.getMetadata().message << std::endl;
 
-    return responsePayload.getColumns();
+    return responsePayload;
   }
 
   Status closeConnection (int64_t access_token) {
