@@ -25,3 +25,12 @@ If you want to build the dependencies using the old C++ ABI, add this cmake argu
 ```bash
 -DCXX_OLD_ABI=ON
 ```
+
+# Run
+
+```bash
+./blazingdb_orchestator_service ORCHESTRATOR_PROTOCOL_TCP_PORT ORCHESTRATOR_COMMUNICATION_TCP_PORT CALCITE_TCP_HOSTNAME CALCITE_PROTOCOL_TCP_PORT
+
+#Example for localhost:
+./blazingdb_orchestator_service 9000 8889 127.0.0.1 8890
+```
