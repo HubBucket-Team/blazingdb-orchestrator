@@ -25,9 +25,10 @@ public:
   ExecutePlanResponseMessage executeFSDirectPlan(std::string logicalPlan,
                     blazingdb::message::io::FileSystemTableGroupSchema& tableGroup,
                     blazingdb::message::io::CommunicationContextSchema& context,
-                    int64_t                                access_token) {
+                    int64_t                                access_token,
+                    uint64_t resultToken) {
 
-    blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup, context};
+    blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup, context, resultToken};
 
     auto bufferedData =
         MakeRequest(interpreter::MessageType_ExecutePlanFileSystem,
