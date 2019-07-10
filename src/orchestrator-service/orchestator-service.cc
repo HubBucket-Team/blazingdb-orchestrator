@@ -656,6 +656,7 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
 
     	}else if(payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_DISTRIBUTED ){
     		//get all of the column tokens with matching node info
+    		std::cout<<"result token is "<<payload.resultToken<<std::endl;
     		std::pair<blazingdb::protocol::TableSchemaSTL,std::vector<BlazingNodeDistributedGDF> > result_pair =
     				getSchemaDistributed(accessToken,payload.resultToken);
     		temp_schema = result_pair.first;
