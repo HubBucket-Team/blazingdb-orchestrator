@@ -406,18 +406,18 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
         }else{
         	//assuming its a file based version
         	if (tables.tables[k].tableSchema.files.size() > 0) { // if table has files, lets split them up
-              // RAL for each table group
-              int total = tables.tables[k].tableSchema.files.size();
-              int quantity = std::max(total / (int)cluster.size(), 1);
-
+              
               // Assign the files to each schema
+              int remaining = tables.tables[k].tableSchema.files.size();
               auto itBegin = tables.tables[k].tableSchema.files.begin();
               auto itEnd = tables.tables[k].tableSchema.files.end();
               for (int j = 0; j < cluster.size(); ++j) {
                   if (itBegin != itEnd){
-                    std::ptrdiff_t offset = std::min((std::ptrdiff_t)quantity, std::distance(itBegin, itEnd));
+                    int batchSize = remaining / ((int)cluster.size() - j);
+                    std::ptrdiff_t offset = (std::ptrdiff_t)batchSize;
                     tableSchemas[j].tables[k].tableSchema.files.assign(itBegin, itBegin + offset);
                     itBegin += offset;
+                    remaining -= batchSize;
                   } else { // no more files to assign
                     tableSchemas[j].tables[k].tableSchema.files.resize(0);
                   }
