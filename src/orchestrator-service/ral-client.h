@@ -17,15 +17,18 @@ namespace interpreter {
 
 class InterpreterClient {
 public:
-  InterpreterClient()
-      // TODO: remove global. @see main()
-      : connection("/tmp/ral.socket"), client(connection) {}
+
+    InterpreterClient(const ConnectionAddress &ralConnectionAddress)
+    : client(ralConnectionAddress)
+    { }
 
   ExecutePlanResponseMessage executeFSDirectPlan(std::string logicalPlan,
                     blazingdb::message::io::FileSystemTableGroupSchema& tableGroup,
-                    int64_t                                access_token) {
+                    blazingdb::message::io::CommunicationContextSchema& context,
+                    int64_t                                access_token,
+                    uint64_t resultToken) {
 
-    blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup};
+    blazingdb::message::io::FileSystemDMLRequestMessage message{logicalPlan, tableGroup, context, resultToken};
 
     auto bufferedData =
         MakeRequest(interpreter::MessageType_ExecutePlanFileSystem,
@@ -62,7 +65,7 @@ public:
   }
 
 
-  std::vector<::gdf_dto::gdf_column> getResult(uint64_t resultToken, int64_t access_token){
+  interpreter::GetResultResponseMessage getResult(uint64_t resultToken, int64_t access_token){
     interpreter::GetResultRequestMessage payload{resultToken};
     auto bufferedData = MakeRequest(interpreter::MessageType_GetResult,
                                      access_token,
@@ -80,7 +83,7 @@ public:
     interpreter::GetResultResponseMessage responsePayload(response.getPayloadBuffer());
     std::cout << "getValues: " << responsePayload.getMetadata().message << std::endl;
 
-    return responsePayload.getColumns();
+    return responsePayload;
   }
 
   Status closeConnection (int64_t access_token) {
@@ -125,7 +128,13 @@ public:
   }
 
 protected:
+
+#ifdef USE_UNIX_SOCKETS
   blazingdb::protocol::UnixSocketConnection connection;
+#else
+  
+#endif
+
   blazingdb::protocol::Client client;
 };
 

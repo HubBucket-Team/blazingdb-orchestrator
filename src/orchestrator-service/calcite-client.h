@@ -16,9 +16,8 @@ namespace calcite {
 
 class CalciteClient {
 public:
-  CalciteClient()
-      // TODO: remove global. @see main()
-      : connection("/tmp/calcite.socket"), client(connection) {
+  CalciteClient(const ConnectionAddress &calciteConnectionAddress)
+      : client(calciteConnectionAddress) {
   }
 
   DMLResponseMessage runQuery(std::string query) {
@@ -60,6 +59,8 @@ public:
   }
 
   Status dropTable(orchestrator::DDLDropTableRequestMessage& payload){
+      
+      
     try {
       int64_t sessionToken = 0;
       auto bufferedData = MakeRequest(orchestrator::MessageType_DDL_DROP_TABLE,
@@ -67,6 +68,7 @@ public:
                                       payload);
 
       Buffer responseBuffer = client.send(bufferedData);
+
       if (responseBuffer.size() == 0) {
         throw std::runtime_error("Orchestrattor::DropTable failed! responseBuffer from calcite is zero");
       }
@@ -83,7 +85,14 @@ public:
 
 
 private:
+  #ifdef USE_UNIX_SOCKETS
+
   blazingdb::protocol::UnixSocketConnection connection;
+
+  #else
+  
+  #endif
+  
   blazingdb::protocol::Client client;
 };
 
