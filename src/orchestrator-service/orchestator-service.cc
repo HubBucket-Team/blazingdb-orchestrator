@@ -295,9 +295,18 @@ using FileSystemBlazingTableSchema = blazingdb::message::io::FileSystemBlazingTa
 std::mutex tables_mutex;
 blazingdb::message::io::FileSystemTableGroupSchema tables;
 
+struct BlazingNodeDistributedGDF{
+	int node_index;
+	BlazingTableSchema gdf;
+};
+
+//This is a very very hacky interim solution that we are using becuase
+//we used flatbuffers in a horrible horrible way to very little applause
+std::vector<std::vector<BlazingNodeDistributedGDF> > distributed_data;
+
 void add_table(orchestrator::DDLCreateTableRequestMessage request,
 		blazingdb::protocol::TableSchemaSTL schema,
-		bool & existed_previously){
+		bool & existed_previously, std::vector<BlazingNodeDistributedGDF> distributed_gdfs ){
 	std::lock_guard<std::mutex> lock(tables_mutex);
 	existed_previously = false;
 	//if table exists overwrite it
@@ -307,6 +316,7 @@ void add_table(orchestrator::DDLCreateTableRequestMessage request,
 			tables.tables[table_index].tableSchema = schema;
 			tables.tables[table_index].schemaType = request.schemaType;
 			tables.tables[table_index].gdf = request.gdf;
+			distributed_data[table_index] = distributed_gdfs;
       break;
 		}
 	}
@@ -317,6 +327,7 @@ void add_table(orchestrator::DDLCreateTableRequestMessage request,
 		new_schema.tableSchema = schema;
 		new_schema.schemaType = request.schemaType;
 		new_schema.gdf = request.gdf;
+		distributed_data.push_back(distributed_gdfs);
 		tables.tables.push_back(new_schema);
 	}
 }
@@ -326,11 +337,13 @@ void remove_table(std::string name){
 	for(int table_index = 0; table_index < tables.tables.size(); table_index++){
 			if(tables.tables[table_index].name == name){
 				tables.tables.erase(tables.tables.begin() + table_index);
+				distributed_data.erase(distributed_data.begin() + table_index);
 				break;
 			}
 	}
 }
 
+typedef uint64_t query_token_t;
 
 static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) {
   using blazingdb::protocol::orchestrator::DMLResponseMessage;
@@ -347,6 +360,13 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
   std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
   std::vector<FileSystemTableGroupSchema> tableSchemas;
 
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<query_token_t> dis(
+			std::numeric_limits<query_token_t>::min(),
+			std::numeric_limits<query_token_t>::max());
+
+	uint64_t token = dis(gen);
 
   std::vector<blazingdb::message::io::CommunicationNodeSchema> fbNodes;
   std::transform(cluster.cbegin(), cluster.cend(),
@@ -373,25 +393,38 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
     }
   
     // Divide number of schema files by the RAL quantity
-    for (std::size_t k = 0; k < tables.tables.size(); ++k) {
-        if (tables.tables[k].tableSchema.files.size() > 0) { // if table has files, lets split them up
-          // RAL for each table group
-          int total = tables.tables[k].tableSchema.files.size();
-          int quantity = std::max(total / (int)cluster.size(), 1);
 
-          // Assign the files to each schema
-          auto itBegin = tables.tables[k].tableSchema.files.begin();
-          auto itEnd = tables.tables[k].tableSchema.files.end();
-          for (int j = 0; j < cluster.size(); ++j) {
-              if (itBegin != itEnd){
-                std::ptrdiff_t offset = std::min((std::ptrdiff_t)quantity, std::distance(itBegin, itEnd));
-                tableSchemas[j].tables[k].tableSchema.files.assign(itBegin, itBegin + offset);
-                itBegin += offset;
-              } else { // no more files to assign
-                tableSchemas[j].tables[k].tableSchema.files.resize(0);
+    for (std::size_t k = 0; k < tables.tables.size(); ++k) {
+        if(tables.tables[k].schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_DISTRIBUTED){
+        	int counter = 0;
+        	for(BlazingNodeDistributedGDF distributed_gdf : distributed_data[k]){
+        		tableSchemas[counter].tables[k].gdf = distributed_data[k][counter].gdf;
+        		counter++;
+        	}
+        }else if(tables.tables[k].schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_GDF){
+        	//TODO: support gdfs! from the user
+        }else{
+        	//assuming its a file based version
+        	if (tables.tables[k].tableSchema.files.size() > 0) { // if table has files, lets split them up
+              
+              // Assign the files to each schema
+              int remaining = tables.tables[k].tableSchema.files.size();
+              auto itBegin = tables.tables[k].tableSchema.files.begin();
+              auto itEnd = tables.tables[k].tableSchema.files.end();
+              for (int j = 0; j < cluster.size(); ++j) {
+                  if (itBegin != itEnd){
+                    int batchSize = remaining / ((int)cluster.size() - j);
+                    std::ptrdiff_t offset = (std::ptrdiff_t)batchSize;
+                    tableSchemas[j].tables[k].tableSchema.files.assign(itBegin, itBegin + offset);
+                    itBegin += offset;
+                    remaining -= batchSize;
+                  } else { // no more files to assign
+                    tableSchemas[j].tables[k].tableSchema.files.resize(0);
+                  }
               }
-          }
+            }
         }
+
     }
 
     std::vector<std::future<result_pair>> futures;
@@ -403,7 +436,8 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
                 auto executePlanResponseMessage = ral_client.executeFSDirectPlan(logicalPlan,
                                                                                  tableSchemas[index],
                                                                                  fbContext,
-                                                                                 accessToken);
+                                                                                 accessToken,
+                                                                                 token);
                 auto nodeInfo = executePlanResponseMessage.getNodeInfo();
                 auto dmlResponseMessage = DMLResponseMessage(executePlanResponseMessage.getResultToken(),
                                                              nodeInfo,
@@ -516,12 +550,73 @@ int convert_string_dtype(std::string str){
 	}
 }
 
+
+
+std::pair<blazingdb::protocol::TableSchemaSTL,std::vector<BlazingNodeDistributedGDF> > getSchemaDistributed(uint64_t accessToken, uint64_t resultToken){
+	using namespace blazingdb::communication;
+	try {
+	    auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
+	    Context* context = manager.generateContext(std::to_string(accessToken), 99);
+	    std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
+
+	    std::vector<std::future<std::pair<Status, interpreter::GetResultResponseMessage> > > futures;
+	    for (std::size_t index = 0; index < cluster.size(); ++index) {
+	        futures.emplace_back(std::async(std::launch::async, [&, index]() {
+	            try {
+	                interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
+	                interpreter::GetResultResponseMessage response = ral_client.getResult(resultToken, accessToken);
+
+
+	                return std::make_pair(Status_Success, response);
+	            }
+	            catch (std::runtime_error &error) {
+
+	                throw;
+	            }
+	        }));
+	    }
+
+	    std::vector<BlazingNodeDistributedGDF> distributed_gdf;
+	    	blazingdb::protocol::TableSchemaSTL temp_schema;
+
+	    	int counter = 0;
+	    	for (auto& future : futures) {
+	    		auto response = future.get();
+	    		if (response.first != Status::Status_Success) {
+	    			//TODO: this hsould be impossible given the logic but maybe we deal with it anyway in case in the fture its possible to throw an error
+	    			throw;
+	    		}else{
+
+	    			auto columns = response.second.columns;
+	    			distributed_gdf.push_back({counter, { columns, response.second.columnTokens, resultToken } });
+	    			if(counter == 0){
+	    				//do logic to make schema here
+
+	    				temp_schema.names = response.second.columnNames;
+	    				for(auto column : response.second.columns){
+	    					temp_schema.types.push_back((int) column.dtype);
+	    				}
+	    			}
+	    		}
+	    		counter++;
+	    	}
+	    	return std::make_pair(temp_schema, distributed_gdf);
+
+	}catch (std::runtime_error &error) {
+	    	throw;
+	}
+
+
+
+}
+
 static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer)  {
     using namespace blazingdb::communication;
     
     orchestrator::DDLCreateTableRequestMessage payload(buffer.data());
 	std::cout << "###DDL Create Table: " << std::endl;
 	blazingdb::protocol::TableSchemaSTL temp_schema;
+	std::vector<BlazingNodeDistributedGDF> distributed_data;
 
     try{
     	if(payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET ||
@@ -559,6 +654,21 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
 
     		temp_schema = ral_response.getTableSchema();
 
+    	}else if(payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_DISTRIBUTED ){
+    		//get all of the column tokens with matching node info
+    		std::cout<<"result token is "<<payload.resultToken<<std::endl;
+    		std::pair<blazingdb::protocol::TableSchemaSTL,std::vector<BlazingNodeDistributedGDF> > result_pair =
+    				getSchemaDistributed(accessToken,payload.resultToken);
+    		temp_schema = result_pair.first;
+    		distributed_data = result_pair.second;
+
+    	    payload.columnNames = temp_schema.names;
+    	    for(auto type : temp_schema.types){
+        	    payload.columnTypes.push_back (convert_dtype_string(type));
+
+    	    }
+
+    		//and put it in the schema for when we run add table
     	}else{
     		//TODO: i think that column names and types are set when they call this kind
     		//so it should be ok
@@ -580,7 +690,7 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
      }
 
     bool existed;
-    add_table(payload,temp_schema,existed);
+    add_table(payload,temp_schema,existed,distributed_data);
 
    try {
 
@@ -618,7 +728,7 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
 static result_pair ddlDropTableService(uint64_t accessToken, Buffer&& buffer)  {
   std::cout << "##DDL Drop Table: " << std::endl;
   //std::cout << "##DEBUG calcite connection address: " << calciteConnectionAddress << std::endl;
-
+  //TODO: make it so that this freese distributed result_set tables
   try {
     calcite::CalciteClient calcite_client(calciteConnectionAddress);
 
