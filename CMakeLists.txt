@@ -26,11 +26,11 @@ include(ConfigureBlazingDBDependencies)
 
 # NOTE Do not change the inclusion order
 # Configure dependencies
-include(ConfigureBoost)
-include(ConfigureFlatBuffers)
+#include(ConfigureBoost)
+#include(ConfigureFlatBuffers)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBCommunication)
-include(ConfigureRapidJSON)
+#include(ConfigureRapidJSON)
 
 find_package(Threads)
 
