@@ -357,6 +357,14 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
 
   auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
   Context* context = manager.generateContext(query, 99);
+
+    std::cout<<"dmlFileSystemService: context Nodes: "<<std::endl;
+    std::cout<<"context master node: "<<std::endl;
+    context->getMasterNode().print();
+    for (auto node : context->getAllNodes()) {
+        node.get()->print();    
+    }
+
   std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
   std::vector<FileSystemTableGroupSchema> tableSchemas;
 
