@@ -310,7 +310,7 @@ void add_table(orchestrator::DDLCreateTableRequestMessage request,
 	std::lock_guard<std::mutex> lock(tables_mutex);
 	existed_previously = false;
   
-  tables.dbName = request.dbName;
+  tables.name = request.dbName;
 
 	//if table exists overwrite it
 	for(int table_index = 0; table_index < tables.tables.size(); table_index++){
@@ -629,7 +629,7 @@ static result_pair getSchemaList(uint64_t accessToken, Buffer&& buffer) {
   std::vector<orchestrator::DDLCreateTableRequestMessage> table_schema_list;
   for (auto table : tables.tables) {
     orchestrator::DDLCreateTableRequestMessage schema; 
-    schema.dbName = tables.dbName;
+    schema.dbName = tables.name;
     schema.name = table.name;
     schema.columnNames = table.columnNames;
     schema.columnTypes = table.columnTypes;
