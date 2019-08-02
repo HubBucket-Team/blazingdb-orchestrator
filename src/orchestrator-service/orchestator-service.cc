@@ -214,16 +214,25 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
 }
 
 
+//TODO percy dirty hack to double check the tokens and gen new ones in case no exist
+std::vector<int64_t> the_tokens;
 
-
-static result_pair  openConnectionService(uint64_t nonAccessToken, Buffer&& buffer)  {
-  srand(time(0));
-  int64_t token = rand();
-  orchestrator::AuthResponseMessage response{token};
-  std::cout << "authorizationService: " << token << std::endl;
-  return std::make_pair(Status_Success, response.getBufferData());
+static result_pair  openConnectionService(uint64_t accessToken, Buffer&& buffer)  {
+    // if accessToken exists in the tokens vector
+    if(std::find(the_tokens.begin(), the_tokens.end(), accessToken) != the_tokens.end()) {
+        srand(time(0));
+        int64_t token = accessToken;
+        orchestrator::AuthResponseMessage response{token};
+        std::cout << "authorizationService (reusing token): " << token << std::endl;
+        return std::make_pair(Status_Success, response.getBufferData());
+    } else {
+        srand(time(0));
+        int64_t token = rand();
+        orchestrator::AuthResponseMessage response{token};
+        std::cout << "authorizationService: " << token << std::endl;
+        return std::make_pair(Status_Success, response.getBufferData());
+    }
 };
-
 
 static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)  {
   using namespace blazingdb::communication;
