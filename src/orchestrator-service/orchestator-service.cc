@@ -216,8 +216,12 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
 
 //TODO percy dirty hack to double check the tokens and gen new ones in case no exist
 std::vector<int64_t> the_tokens;
+std::mutex the_tokens_mutex_open;  // protects opening the_tokens
+std::mutex the_tokens_mutex_close;  // protects closing the_tokens
 
 static result_pair  openConnectionService(uint64_t accessToken, Buffer&& buffer)  {
+    std::lock_guard<std::mutex> lock(the_tokens_mutex_open);
+    
     // if accessToken exists in the tokens vector
     if(std::find(the_tokens.begin(), the_tokens.end(), accessToken) != the_tokens.end()) {
         srand(time(0));
@@ -234,7 +238,15 @@ static result_pair  openConnectionService(uint64_t accessToken, Buffer&& buffer)
     }
 };
 
+void remove(std::vector<int64_t> &vec, size_t pos) {
+    std::vector<int64_t>::iterator it = vec.begin();
+    std::advance(it, pos);
+    vec.erase(it);
+}
+
 static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)  {
+    std::lock_guard<std::mutex> lock(the_tokens_mutex_close);
+    
   using namespace blazingdb::communication;
 
   try {
@@ -283,6 +295,11 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)
     if (isGood == false) {
         return error_message;
     }
+    
+    std::vector<int64_t>::iterator it = std::find(the_tokens.begin(), the_tokens.end(), accessToken);
+    const int pos = std::distance(the_tokens.begin(), it);
+    remove(the_tokens, pos);
+    
   } catch (std::runtime_error &error) {
       std::cout << "In function closeConnectionService: " << error.what() << std::endl;
       std::string stringErrorMessage = "Cannot close the connection: " + std::string(error.what());
