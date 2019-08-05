@@ -6,6 +6,7 @@
 #include <string>
 #include <future>
 #include <mutex>
+#include <random>
 
 #include "blazingdb-communication.hpp"
 #include <blazingdb/communication/Context.h>
@@ -214,10 +215,6 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
 }
 
 
-//TODO percy dirty hack to double check the tokens and gen new ones in case no exist
-std::vector<int64_t> the_tokens;
-std::mutex the_tokens_mutex_open;  // protects opening the_tokens
-std::mutex the_tokens_mutex_close;  // protects closing the_tokens
 
 static result_pair  openConnectionService(uint64_t accessToken, Buffer&& buffer)  {
     std::lock_guard<std::mutex> lock(the_tokens_mutex_open);
@@ -240,8 +237,6 @@ static result_pair  openConnectionService(uint64_t accessToken, Buffer&& buffer)
 };
 
 static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)  {
-    std::lock_guard<std::mutex> lock(the_tokens_mutex_close);
-    
   using namespace blazingdb::communication;
 
   try {
@@ -296,10 +291,6 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)
     if (it != the_tokens.end()) {
         the_tokens.erase(it);
     }
-        
-    //const int pos = std::distance(the_tokens.begin(), it);
-    //remove(the_tokens, pos);
-    
   } catch (std::runtime_error &error) {
       std::cout << "In function closeConnectionService: " << error.what() << std::endl;
       std::string stringErrorMessage = "Cannot close the connection: " + std::string(error.what());
@@ -335,6 +326,9 @@ void add_table(orchestrator::DDLCreateTableRequestMessage request,
 		bool & existed_previously, std::vector<BlazingNodeDistributedGDF> distributed_gdfs ){
 	std::lock_guard<std::mutex> lock(tables_mutex);
 	existed_previously = false;
+  
+  tables.name = request.dbName;
+
 	//if table exists overwrite it
 	for(int table_index = 0; table_index < tables.tables.size(); table_index++){
 		if(tables.tables[table_index].name == request.name){
@@ -342,6 +336,8 @@ void add_table(orchestrator::DDLCreateTableRequestMessage request,
 			tables.tables[table_index].tableSchema = schema;
 			tables.tables[table_index].schemaType = request.schemaType;
 			tables.tables[table_index].gdf = request.gdf;
+      tables.tables[table_index].columnNames = request.columnNames;
+      tables.tables[table_index].columnTypes = request.columnTypes;
 			distributed_data[table_index] = distributed_gdfs;
       break;
 		}
@@ -353,6 +349,9 @@ void add_table(orchestrator::DDLCreateTableRequestMessage request,
 		new_schema.tableSchema = schema;
 		new_schema.schemaType = request.schemaType;
 		new_schema.gdf = request.gdf;
+    new_schema.columnNames = request.columnNames;
+    new_schema.columnTypes = request.columnTypes;
+
 		distributed_data.push_back(distributed_gdfs);
 		tables.tables.push_back(new_schema);
 	}
@@ -640,8 +639,21 @@ std::pair<blazingdb::protocol::TableSchemaSTL,std::vector<BlazingNodeDistributed
 	    	throw;
 	}
 
+}
 
 
+static result_pair getSchemaList(uint64_t accessToken, Buffer&& buffer) {
+  std::vector<orchestrator::DDLCreateTableRequestMessage> table_schema_list;
+  for (auto table : tables.tables) {
+    orchestrator::DDLCreateTableRequestMessage schema; 
+    schema.dbName = tables.name;
+    schema.name = table.name;
+    schema.columnNames = table.columnNames;
+    schema.columnTypes = table.columnTypes;
+    table_schema_list.push_back(schema);
+  } 
+  orchestrator::SchemaListMessage payload{table_schema_list};
+  return std::make_pair(Status_Success, payload.getBufferData());
 }
 
 static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer)  {
@@ -873,6 +885,8 @@ main(int argc, const char *argv[]) {
 
   services.insert(std::make_pair(orchestrator::MessageType_RegisterFileSystem, &registerFileSystem));
   services.insert(std::make_pair(orchestrator::MessageType_DeregisterFileSystem, &deregisterFileSystem));
+
+  services.insert(std::make_pair(orchestrator::MessageType_SchemaList, &getSchemaList));
 
   server.handle(&orchestratorService);
 
