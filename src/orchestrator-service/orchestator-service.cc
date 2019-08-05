@@ -6,6 +6,7 @@
 #include <string>
 #include <future>
 #include <mutex>
+#include <random>
 
 #include "blazingdb-communication.hpp"
 #include <blazingdb/communication/Context.h>
