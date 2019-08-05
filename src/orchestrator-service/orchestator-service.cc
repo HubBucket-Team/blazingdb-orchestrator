@@ -234,15 +234,10 @@ static result_pair  openConnectionService(uint64_t accessToken, Buffer&& buffer)
         int64_t token = rand();
         orchestrator::AuthResponseMessage response{token};
         std::cout << "authorizationService: " << token << std::endl;
+        the_tokens.push_back(token);
         return std::make_pair(Status_Success, response.getBufferData());
     }
 };
-
-void remove(std::vector<int64_t> &vec, size_t pos) {
-    std::vector<int64_t>::iterator it = vec.begin();
-    std::advance(it, pos);
-    vec.erase(it);
-}
 
 static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)  {
     std::lock_guard<std::mutex> lock(the_tokens_mutex_close);
@@ -297,8 +292,13 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)
     }
     
     std::vector<int64_t>::iterator it = std::find(the_tokens.begin(), the_tokens.end(), accessToken);
-    const int pos = std::distance(the_tokens.begin(), it);
-    remove(the_tokens, pos);
+    
+    if (it != the_tokens.end()) {
+        the_tokens.erase(it);
+    }
+        
+    //const int pos = std::distance(the_tokens.begin(), it);
+    //remove(the_tokens, pos);
     
   } catch (std::runtime_error &error) {
       std::cout << "In function closeConnectionService: " << error.what() << std::endl;
