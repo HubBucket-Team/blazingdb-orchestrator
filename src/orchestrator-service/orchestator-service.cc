@@ -309,6 +309,9 @@ void add_table(orchestrator::DDLCreateTableRequestMessage request,
 		bool & existed_previously, std::vector<BlazingNodeDistributedGDF> distributed_gdfs ){
 	std::lock_guard<std::mutex> lock(tables_mutex);
 	existed_previously = false;
+  
+  tables.name = request.dbName;
+
 	//if table exists overwrite it
 	for(int table_index = 0; table_index < tables.tables.size(); table_index++){
 		if(tables.tables[table_index].name == request.name){
@@ -316,6 +319,8 @@ void add_table(orchestrator::DDLCreateTableRequestMessage request,
 			tables.tables[table_index].tableSchema = schema;
 			tables.tables[table_index].schemaType = request.schemaType;
 			tables.tables[table_index].gdf = request.gdf;
+      tables.tables[table_index].columnNames = request.columnNames;
+      tables.tables[table_index].columnTypes = request.columnTypes;
 			distributed_data[table_index] = distributed_gdfs;
       break;
 		}
@@ -327,6 +332,9 @@ void add_table(orchestrator::DDLCreateTableRequestMessage request,
 		new_schema.tableSchema = schema;
 		new_schema.schemaType = request.schemaType;
 		new_schema.gdf = request.gdf;
+    new_schema.columnNames = request.columnNames;
+    new_schema.columnTypes = request.columnTypes;
+
 		distributed_data.push_back(distributed_gdfs);
 		tables.tables.push_back(new_schema);
 	}
@@ -614,8 +622,21 @@ std::pair<blazingdb::protocol::TableSchemaSTL,std::vector<BlazingNodeDistributed
 	    	throw;
 	}
 
+}
 
 
+static result_pair getSchemaList(uint64_t accessToken, Buffer&& buffer) {
+  std::vector<orchestrator::DDLCreateTableRequestMessage> table_schema_list;
+  for (auto table : tables.tables) {
+    orchestrator::DDLCreateTableRequestMessage schema; 
+    schema.dbName = tables.name;
+    schema.name = table.name;
+    schema.columnNames = table.columnNames;
+    schema.columnTypes = table.columnTypes;
+    table_schema_list.push_back(schema);
+  } 
+  orchestrator::SchemaListMessage payload{table_schema_list};
+  return std::make_pair(Status_Success, payload.getBufferData());
 }
 
 static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer)  {
@@ -847,6 +868,8 @@ main(int argc, const char *argv[]) {
 
   services.insert(std::make_pair(orchestrator::MessageType_RegisterFileSystem, &registerFileSystem));
   services.insert(std::make_pair(orchestrator::MessageType_DeregisterFileSystem, &deregisterFileSystem));
+
+  services.insert(std::make_pair(orchestrator::MessageType_SchemaList, &getSchemaList));
 
   server.handle(&orchestratorService);
 
