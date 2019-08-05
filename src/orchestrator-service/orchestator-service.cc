@@ -214,7 +214,10 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
-
+//TODO percy dirty hack to double check the tokens and gen new ones in case no exist
+std::vector<int64_t> the_tokens;
+std::mutex the_tokens_mutex_open;  // protects opening the_tokens
+std::mutex the_tokens_mutex_close;  // protects closing the_tokens
 
 static result_pair  openConnectionService(uint64_t accessToken, Buffer&& buffer)  {
     std::lock_guard<std::mutex> lock(the_tokens_mutex_open);
