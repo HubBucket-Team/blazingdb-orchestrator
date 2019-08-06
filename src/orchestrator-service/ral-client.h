@@ -65,6 +65,30 @@ public:
   }
 
 
+  blazingdb::protocol::BlazingTableSchema registerDaskSlice(blazingdb::protocol::BlazingTableSchema gdf, uint64_t resultToken, int64_t access_token){
+	   BlazingTableSchema schema {blazingdb::protocol::BlazingTableSchema gdf, uint64_t resultToken};
+
+	   interpreter::BlazingTableShema message;
+	  auto bufferedData = MakeRequest(interpreter::MessageType_GetResult,
+	                                       access_token,
+	                                       message);
+
+	    Buffer responseBuffer = client.send(bufferedData);
+	    ResponseMessage response{responseBuffer.data()};
+
+	    if (response.getStatus() == Status_Error) {
+	      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
+	      throw std::runtime_error(errorMessage.getMessage());
+	    }
+
+	    interpreter::BlazingTableSchemaMessage responsePayload(response.getPayloadBuffer());
+
+
+	    return {responsePayload.columns, responsePayload.columnTokens, responsePayload.resultToken};
+
+
+  }
+
   interpreter::GetResultResponseMessage getResult(uint64_t resultToken, int64_t access_token){
     interpreter::GetResultRequestMessage payload{resultToken};
     auto bufferedData = MakeRequest(interpreter::MessageType_GetResult,

@@ -677,6 +677,42 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
     	    }
 
     		//and put it in the schema for when we run add table
+    	}else if(payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_DASK ){
+    		//the orchestrator needs to generate a result_token to store this file
+    		//so we can expect this to exist
+    		std::cout<<"result token is "<<payload.resultToken<<std::endl;
+
+    		temp_schema.names = payload.columnNames;
+			for(int i = 0; i <  payload.columnTypes.size(); i++){
+				temp_schema.types.push_back(convert_string_dtype(payload.columnTypes[i]));
+			}
+
+			auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
+			Context* context = manager.generateContext(std::to_string(accessToken), 99);
+			std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
+
+    		for(int i = 0; i < cluster.size(); i++){
+
+    			BlazingNodeDistributedGDF nodeGDF;
+    			auto node = cluster[i];
+    			interpreter::InterpreterClient ral_client(getRalConnectionAddress(node));
+    			auto ral_response  = ral_client.registerDaskSlice(payload.nodeTables[i].gdf,payload.resultToken);
+    			nodeGDF.node_index = i;
+
+    			nodeGDF.gdf = { ral_response.columns, ral_response.columnTokens, resultToken };
+    			distributed_data.push_back(nodeGDF);
+    		}
+
+
+
+
+    	    payload.columnNames = temp_schema.names;
+    	    for(auto type : temp_schema.types){
+        	    payload.columnTypes.push_back (convert_dtype_string(type));
+
+    	    }
+
+    		//and put it in the schema for when we run add table
     	}else{
     		//TODO: i think that column names and types are set when they call this kind
     		//so it should be ok
