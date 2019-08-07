@@ -42,7 +42,7 @@ static void setupUnixSocketConnections(
   orchestratorConnectionAddress.unix_socket_path = orchestrator_unix_socket_path;
   calciteConnectionAddress.unix_socket_path = calcite_unix_socket_path;
   ralConnectionAddress.unix_socket_path = ral_unix_socket_path;
-  
+
   orchestratorCommunicationTcpPort = orchestrator_communication_tcp_port;
 }
 
@@ -77,7 +77,7 @@ static ConnectionAddress getRalConnectionAddress(std::shared_ptr<blazingdb::comm
     connectionAddress.unix_socket_path = unix_socket_path;
     return connectionAddress;
 }
-                
+
 #else
 
 static ConnectionAddress getRalConnectionAddress(std::shared_ptr<blazingdb::communication::Node> node) {
@@ -94,26 +94,26 @@ static ConnectionAddress getRalConnectionAddress(std::shared_ptr<blazingdb::comm
 
 static result_pair registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
   using namespace blazingdb::communication;
-  
+
   try {
     auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
     Context* context = manager.generateContext(std::to_string(accessToken), 99);
     std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
-    
+
     std::vector<std::future<result_pair>> futures;
     for (std::size_t index = 0; index < cluster.size(); ++index) {
         futures.emplace_back(std::async(std::launch::async, [&, index]() {
             try {
                 interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
                 auto response = ral_client.registerFileSystem(accessToken, buffer);
-                
-                if (response == Status_Error) {                
+
+                if (response == Status_Error) {
                     std::cout << "In function registerFileSystem for RAL: " << std::to_string(index) << std::endl;
                     std::string stringErrorMessage = "Cannot register the filesystem for RAL: " + std::to_string(index);
                     ResponseErrorMessage errorMessage{ stringErrorMessage };
                     return std::make_pair(Status_Error, errorMessage.getBufferData());
                 }
-                
+
                 ZeroMessage ok_response{};
                 return std::make_pair(Status_Success, ok_response.getBufferData());
             }
@@ -137,7 +137,7 @@ static result_pair registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
             error_message = response;
         }
     }
-    
+
     if (isGood == false) {
         return error_message;
     }
@@ -159,7 +159,7 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
     auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
     Context* context = manager.generateContext(std::to_string(accessToken), 99);
     std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
-    
+
     std::vector<std::future<result_pair>> futures;
     for (std::size_t index = 0; index < cluster.size(); ++index) {
         futures.emplace_back(std::async(std::launch::async, [&, index]() {
@@ -167,14 +167,14 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
                 interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
                 blazingdb::message::io::FileSystemDeregisterRequestMessage message(buffer.data());
                 auto response = ral_client.deregisterFileSystem(accessToken, message.getAuthority());
-                
-                if (response == Status_Error) {                
+
+                if (response == Status_Error) {
                     std::cout << "In function deregisterFileSystem for RAL: " << std::to_string(index) << std::endl;
                     std::string stringErrorMessage = "Cannot deregister the filesystem for RAL: " + std::to_string(index);
                     ResponseErrorMessage errorMessage{ stringErrorMessage };
                     return std::make_pair(Status_Error, errorMessage.getBufferData());
                 }
-                
+
                 ZeroMessage ok_response{};
                 return std::make_pair(Status_Success, ok_response.getBufferData());
             }
@@ -198,7 +198,7 @@ static result_pair deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  
             error_message = response;
         }
     }
-    
+
     if (isGood == false) {
         return error_message;
     }
@@ -232,7 +232,7 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)
     auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
     Context* context = manager.generateContext(std::to_string(accessToken), 99);
     std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
-    
+
     std::vector<std::future<result_pair>> futures;
     for (std::size_t index = 0; index < cluster.size(); ++index) {
         futures.emplace_back(std::async(std::launch::async, [&, index]() {
@@ -240,14 +240,14 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)
                 interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[index]));
                 auto status = ral_client.closeConnection(accessToken);
                 std::cout << "status close conneciton for RAL: " << std::to_string(index) << ": " << status << std::endl;
-                
-                if (status == Status_Error) {                
+
+                if (status == Status_Error) {
                     std::cout << "In function closeConnectionService for RAL: " << std::to_string(index) << std::endl;
                     std::string stringErrorMessage = "Cannot close the connection for RAL: " + std::to_string(index);
                     ResponseErrorMessage errorMessage{ stringErrorMessage };
                     return std::make_pair(Status_Error, errorMessage.getBufferData());
                 }
-                
+
                 ZeroMessage ok_response{};
                 return std::make_pair(Status_Success, ok_response.getBufferData());
             }
@@ -270,7 +270,7 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& buffer)
             error_message = response;
         }
     }
-    
+
     if (isGood == false) {
         return error_message;
     }
@@ -349,7 +349,7 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
   using blazingdb::protocol::orchestrator::DMLResponseMessage;
   using blazingdb::protocol::orchestrator::DMLDistributedResponseMessage;
   using namespace blazingdb::communication;
-  
+
   blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(buffer.data());
   auto query = requestPayload.statement();
   std::cout << "##DML-FS: " << query << std::endl;
@@ -362,7 +362,7 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
     std::cout<<"context master node: "<<std::endl;
     context->getMasterNode().print();
     for (auto node : context->getAllNodes()) {
-        node.get()->print();    
+        node.get()->print();
     }
 
   std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
@@ -399,7 +399,7 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
     for (int k = 0; k < cluster.size(); ++k) {
       tableSchemas.emplace_back(tables);
     }
-  
+
     // Divide number of schema files by the RAL quantity
 
     for (std::size_t k = 0; k < tables.tables.size(); ++k) {
@@ -414,7 +414,7 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
         }else{
         	//assuming its a file based version
         	if (tables.tables[k].tableSchema.files.size() > 0) { // if table has files, lets split them up
-              
+
               // Assign the files to each schema
               int remaining = tables.tables[k].tableSchema.files.size();
               auto itBegin = tables.tables[k].tableSchema.files.begin();
@@ -620,7 +620,7 @@ std::pair<blazingdb::protocol::TableSchemaSTL,std::vector<BlazingNodeDistributed
 
 static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer)  {
     using namespace blazingdb::communication;
-    
+
     orchestrator::DDLCreateTableRequestMessage payload(buffer.data());
 	std::cout << "###DDL Create Table: " << std::endl;
 	blazingdb::protocol::TableSchemaSTL temp_schema;
@@ -629,11 +629,11 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
     try{
     	if(payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET ||
     			payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
-            
+
             auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
             Context* context = manager.generateContext(std::to_string(accessToken), 99);
             std::vector<std::shared_ptr<Node>> cluster = context->getAllNodes();
-            
+
             interpreter::InterpreterClient ral_client(getRalConnectionAddress(cluster[0]));
     		auto ral_response = ral_client.parseSchema(buffer,accessToken);
     		payload.columnNames = ral_response.getTableSchema().names;
@@ -799,7 +799,7 @@ static std::map<int8_t, FunctionType> services;
 auto orchestratorService(const blazingdb::protocol::Buffer &requestBuffer) -> blazingdb::protocol::Buffer {
   RequestMessage request{requestBuffer.data()};
   std::cout << "header: " << (int)request.messageType() << std::endl;
- 
+
   auto result = services[request.messageType()] (request.accessToken(),  request.getPayloadBuffer() );
   ResponseMessage responseObject{result.first, result.second};
   return Buffer{responseObject.getBufferData()};
@@ -814,12 +814,12 @@ main(int argc, const char *argv[]) {
 
   if (argc == 2) {
     const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[1]);
-    
+
     if (orchestratorCommunicationPort == -1) {
       std::cout << "FATAL: Invalid Orchestrator TCP ports " + std::string(argv[1]) + " " + std::string(argv[1]) << std::endl;
       return EXIT_FAILURE;
     }
-    
+
     setupUnixSocketConnections(orchestratorCommunicationPort);
   } else {
     // when the user doesnt enter any args
@@ -831,7 +831,7 @@ main(int argc, const char *argv[]) {
   std::cout << "orchestrator unix socket path: " << orchestratorConnectionAddress.unix_socket_path << std::endl;
   std::cout << "calcite unix socket path: " << calciteConnectionAddress.unix_socket_path << std::endl;
   std::cout << "ral unix socket path: " << ralConnectionAddress.unix_socket_path << std::endl;
-  
+
 #else
 
   std::cout << "usage: " << argv[0] << " <ORCHESTRATOR_HTTP_COMMUNICATION_PORT> <ORCHESTRATOR_TCP_PROTOCOL_PORT> <CALCITE_TCP_PROTOCOL_[IP|HOSTNAME]> <CALCITE_TCP_PROTOCOL_PORT>" << std::endl;
@@ -841,22 +841,22 @@ main(int argc, const char *argv[]) {
       return EXIT_FAILURE;
   }
 
-  const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[1]);  
+  const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[1]);
   const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[2]);
-  
+
   if (orchestratorProtocolPort == -1 || orchestratorCommunicationPort == -1) {
       std::cout << "FATAL: Invalid Orchestrator TCP ports " + std::string(argv[1]) + " " + std::string(argv[2]) << std::endl;
       return EXIT_FAILURE;
   }
-  
+
   const std::string calciteHost = argv[3];
   const int calcitePort = ConnectionUtils::parsePort(argv[4]);
-  
+
   if (calcitePort == -1) {
       std::cout << "FATAL: Invalid Calcite TCP port " + std::string(argv[4]) << std::endl;
       return EXIT_FAILURE;
   }
-  
+
   setupTCPConnections(orchestratorCommunicationPort, orchestratorProtocolPort, calciteHost, calcitePort);
 
   std::cout << "Orchestrator HTTP communication port: " << orchestratorCommunicationTcpPort << std::endl;

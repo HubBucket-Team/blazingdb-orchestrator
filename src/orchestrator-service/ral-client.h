@@ -65,28 +65,30 @@ public:
   }
 
 
-  blazingdb::protocol::BlazingTableSchema registerDaskSlice(blazingdb::protocol::BlazingTableSchema gdf, uint64_t resultToken, int64_t access_token){
-	   BlazingTableSchema schema {blazingdb::protocol::BlazingTableSchema gdf, uint64_t resultToken};
+  blazingdb::protocol::BlazingTableSchema
+  registerDaskSlice(blazingdb::protocol::BlazingTableSchema & table,
+                    std::uint64_t                             resultToken,
+                    std::int64_t                              access_token) {
+      blazingdb::protocol::interpreter::RegisterDaskSliceRequestMessage
+          resgisterDaskSliceMessage{table, resultToken};
 
-	   interpreter::BlazingTableShema message;
-	  auto bufferedData = MakeRequest(interpreter::MessageType_GetResult,
-	                                       access_token,
-	                                       message);
+      blazingdb::protocol::Buffer bufferedData = MakeRequest(
+          blazingdb::protocol::interpreter::MessageType_RegisterDaskSlice,
+          access_token,
+          resgisterDaskSliceMessage);
 
-	    Buffer responseBuffer = client.send(bufferedData);
-	    ResponseMessage response{responseBuffer.data()};
+      blazingdb::protocol::Buffer responseBuffer = client.send(bufferedData);
+      ResponseMessage             response{responseBuffer.data()};
 
-	    if (response.getStatus() == Status_Error) {
-	      ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
-	      throw std::runtime_error(errorMessage.getMessage());
-	    }
+      if (response.getStatus() == Status_Error) {
+          ResponseErrorMessage errorMessage{response.getPayloadBuffer()};
+          throw std::runtime_error(errorMessage.getMessage());
+      }
 
-	    interpreter::BlazingTableSchemaMessage responsePayload(response.getPayloadBuffer());
+      blazingdb::protocol::interpreter::RegisterDaskSliceResponseMessage
+          registerDaskSliceResponseMessage{response.getPayloadBuffer()};
 
-
-	    return {responsePayload.columns, responsePayload.columnTokens, responsePayload.resultToken};
-
-
+      return registerDaskSliceResponseMessage.blazingTableSchema();
   }
 
   interpreter::GetResultResponseMessage getResult(uint64_t resultToken, int64_t access_token){
@@ -156,7 +158,7 @@ protected:
 #ifdef USE_UNIX_SOCKETS
   blazingdb::protocol::UnixSocketConnection connection;
 #else
-  
+
 #endif
 
   blazingdb::protocol::Client client;
