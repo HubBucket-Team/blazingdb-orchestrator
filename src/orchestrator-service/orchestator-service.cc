@@ -431,13 +431,13 @@ static result_pair dmlFileSystemService (uint64_t accessToken, Buffer&& buffer) 
     // Divide number of schema files by the RAL quantity
 
     for (std::size_t k = 0; k < tables.tables.size(); ++k) {
-        if(tables.tables[k].schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_DISTRIBUTED){
+        if(tables.tables[k].schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_DISTRIBUTED){
         	int counter = 0;
         	for(BlazingNodeDistributedGDF distributed_gdf : distributed_data[k]){
         		tableSchemas[counter].tables[k].gdf = distributed_data[k][counter].gdf;
         		counter++;
         	}
-        }else if(tables.tables[k].schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_GDF){
+        }else if(tables.tables[k].schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_GDF){
         	//TODO: support gdfs! from the user
         }else{
         	//assuming its a file based version
@@ -668,8 +668,8 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
 	std::vector<BlazingNodeDistributedGDF> distributed_data;
 
     try{
-    	if(payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET ||
-    			payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+        if(payload.schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_PARQUET ||
+                payload.schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_CSV){
             
             auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
             Context* context = manager.generateContext(std::to_string(accessToken), 99);
@@ -703,7 +703,7 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
 
     		temp_schema = ral_response.getTableSchema();
 
-    	}else if(payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_DISTRIBUTED ){
+        }else if(payload.schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_DISTRIBUTED ){
     		//get all of the column tokens with matching node info
     		std::cout<<"result token is "<<payload.resultToken<<std::endl;
     		std::pair<blazingdb::protocol::TableSchemaSTL,std::vector<BlazingNodeDistributedGDF> > result_pair =
