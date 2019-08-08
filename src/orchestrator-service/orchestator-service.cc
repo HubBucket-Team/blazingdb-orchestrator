@@ -628,7 +628,8 @@ static result_pair ddlCreateTableService(uint64_t accessToken, Buffer&& buffer) 
 
     try{
     	if(payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET ||
-    			payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+    			payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV ||
+          payload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_JSON){
             
             auto& manager = Communication::Manager(orchestratorCommunicationTcpPort);
             Context* context = manager.generateContext(std::to_string(accessToken), 99);
